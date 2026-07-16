@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Git Contribution AI</title>
+  <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<main class="page-shell">
+  <section class="intro">
+    <span class="badge">Diploma Project</span>
+    <h1>Who really contributed to the project?</h1>
+    <p class="lead">
+      Git Contribution AI reads the commit history and prepares
+      a clear report about each team member's work.
+    </p>
+
+    <div class="steps" aria-label="Analysis steps">
+      <div><strong>1</strong><span>Download Git history</span></div>
+      <div><strong>2</strong><span>Analyze changes with Gemini</span></div>
+      <div><strong>3</strong><span>Email report</span></div>
+    </div>
+  </section>
+
+  <section class="form-card">
+    <div class="form-heading">
+      <p class="eyebrow">New analysis</p>
+      <h2>Project details</h2>
+      <p>Public GitHub and GitLab repositories are currently supported.</p>
+    </div>
+
+    <div class="success-message" th:if="${message}" th:text="${message}"></div>
+
+    <form th:action="@{/analyze}" th:object="${analysisRequest}" method="post">
+      <div class="field">
+        <label for="repositoryUrl">Repository URL</label>
+        <input id="repositoryUrl" type="url" th:field="*{repositoryUrl}"
+               placeholder="https://github.com/username/project" required>
+        <small class="error" th:if="${#fields.hasErrors('repositoryUrl')}"
+               th:errors="*{repositoryUrl}"></small>
+      </div>
+
+      <div class="field">
+        <label for="projectDescription">Project goal or short description</label>
+        <textarea id="projectDescription" th:field="*{projectDescription}" rows="6"
+                  placeholder="Explain what the project should achieve..." required></textarea>
+        <small class="hint">The description helps Gemini determine the importance of each change.</small>
+        <small class="error" th:if="${#fields.hasErrors('projectDescription')}"
+               th:errors="*{projectDescription}"></small>
+      </div>
+
+      <div class="field">
+        <label for="email">Report email</label>
+        <input id="email" type="email" th:field="*{email}"
+               placeholder="ime@example.com" required>
+        <small class="error" th:if="${#fields.hasErrors('email')}"
+               th:errors="*{email}"></small>
+      </div>
+
+      <button type="submit">Start analysis</button>
+      <p class="privacy-note">The code is used only for the current analysis and is not stored.</p>
+    </form>
+  </section>
+</main>
+</body>
+</html>
