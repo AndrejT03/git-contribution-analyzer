@@ -8,7 +8,7 @@ public record ContributorAnalysis(
         String contributionLevel,
         String summary,
         List<String> mainWork,
-        List<CategorySummary> categorySummaries,
+        List<CategorySummary> categorySummary,
         List<CommitAnalysis> commitAnalyses,
         List<String> riskFlags
 ) {

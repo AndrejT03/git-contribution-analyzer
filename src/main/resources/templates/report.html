@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="'Report · ' + ${report.repositoryName}">AI Report</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body class="report-body">
+<header class="report-nav no-print">
+    <a class="brand" th:href="@{/}">Git Contribution AI</a>
+    <div class="nav-actions">
+        <a class="secondary-button" th:href="${report.repositoryUrl}" target="_blank" rel="noopener">Open repository</a>
+        <button class="print-button" type="button" onclick="window.print()">Save as PDF</button>
+    </div>
+</header>
+
+<main class="report-shell">
+    <section class="report-hero">
+        <div>
+            <span class="badge">Gemini AI Report</span>
+            <h1 th:text="${report.repositoryName}">Project name</h1>
+            <p class="lead" th:text="${report.analysis.projectSummary}">Short summary.</p>
+        </div>
+        <dl class="report-meta">
+            <div><dt>Branch</dt><dd th:text="${report.defaultBranch}">main</dd></div>
+            <div><dt>Commits</dt><dd th:text="${report.analyzedCommitCount}">0</dd></div>
+            <div><dt>AI model</dt><dd th:text="${report.geminiModel}">Gemini</dd></div>
+            <div><dt>Generated</dt><dd th:text="${#temporals.format(report.generatedAt, 'dd.MM.yyyy HH:mm')}">date</dd></div>
+        </dl>
+    </section>
+
+    <div class="new-report-note no-print" th:if="${newReport}">
+        Analysis completed successfully. The full report is shown below.
+    </div>
+
+    <section class="report-section two-columns">
+        <article class="report-card">
+            <p class="eyebrow">Project goal</p>
+            <p th:text="${report.projectDescription}">Description.</p>
+        </article>
+        <article class="report-card">
+            <p class="eyebrow">Goal alignment</p>
+            <p th:text="${report.analysis.goalAlignment}">AI assessment.</p>
+        </article>
+    </section>
+
+    <section class="report-section">
+        <div class="section-heading">
+            <p class="eyebrow">Contribution by member</p>
+            <h2>Distribution of actual work</h2>
+        </div>
+
+        <article class="contributor-card" th:each="contributor : ${report.analysis.contributors}">
+            <div class="contributor-top">
+                <div>
+                    <h3 th:text="${contributor.name}">Name</h3>
+                    <p class="contributor-email" th:text="${contributor.email}">email</p>
+                </div>
+                <div class="score">
+                    <strong th:text="${contributor.contributionPercentage} + '%'">0%</strong>
+                    <span th:text="${contributor.contributionLevel}">Level</span>
+                </div>
+            </div>
+
+            <div class="progress-track" aria-hidden="true">
+                <span th:style="'width: ' + ${contributor.contributionPercentage} + '%'"> </span>
+            </div>
+            <p class="contributor-summary" th:text="${contributor.summary}">Summary.</p>
+
+            <div class="contributor-grid">
+                <div>
+                    <h4>Main work</h4>
+                    <ul class="clean-list">
+                        <li th:each="work : ${contributor.mainWork}" th:text="${work}">Work</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>Categories</h4>
+                    <div class="category-list">
+                        <div th:each="category : ${contributor.categorySummary}">
+                            <span th:text="${category.category}">Category</span>
+                            <strong th:text="${category.commitCount}">0</strong>
+                            <small th:text="${category.explanation}">Explanation</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="risk-box" th:if="${!contributor.riskFlags.isEmpty()}">
+                <h4>Notes</h4>
+                <ul>
+                    <li th:each="flag : ${contributor.riskFlags}" th:text="${flag}">Note</li>
+                </ul>
+            </div>
+
+            <details class="commit-details">
+                <summary th:text="'Analysis of ' + ${contributor.commitAnalyses.size()} + ' commits'">Commits</summary>
+                <div class="commit-row" th:each="commit : ${contributor.commitAnalyses}">
+                    <div class="commit-title">
+                        <code th:text="${#strings.substring(commit.hash, 0, 7)}">0000000</code>
+                        <strong th:text="${commit.message}">Commit message</strong>
+                    </div>
+                    <div class="commit-tags">
+                        <span th:text="${commit.category}">Category</span>
+                        <span th:text="'Importance ' + ${commit.importance} + '/5'">Importance</span>
+                    </div>
+                    <p th:text="${commit.explanation}">Explanation.</p>
+                </div>
+            </details>
+        </article>
+    </section>
+
+    <section class="report-section" th:if="${!report.analysis.teamIndicators.isEmpty()}">
+        <div class="section-heading">
+            <p class="eyebrow">Team indicators</p>
+            <h2>Possible contribution imbalance</h2>
+        </div>
+        <div class="indicator-grid">
+            <article class="indicator-card" th:each="indicator : ${report.analysis.teamIndicators}"
+                     th:classappend="${#strings.toLowerCase(indicator.severity)}">
+                <span th:text="${indicator.severity}">INFO</span>
+                <h3 th:text="${indicator.title}">Title</h3>
+                <p th:text="${indicator.explanation}">Explanation.</p>
+            </article>
+        </div>
+    </section>
+
+    <section class="report-section conclusion-card">
+        <p class="eyebrow">Conclusion</p>
+        <h2>Final AI assessment</h2>
+        <p th:text="${report.analysis.conclusion}">Conclusion.</p>
+        <hr>
+        <h3>Methodology</h3>
+        <p th:text="${report.analysis.methodology}">Methodology.</p>
+        <small>This report was generated by Gemini from Git data and should be used as supporting evidence, not as the sole assessment.</small>
+    </section>
+</main>
+</body>
+</html>
