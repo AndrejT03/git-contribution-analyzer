@@ -29,6 +29,9 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
+### Tests not included in repository ###
+/src/test/java/mk/ukim/finki/gitcontributionanalyzer/service/
+
 ### VS Code ###
 .vscode/
 
