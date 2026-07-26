@@ -17,7 +17,7 @@ public class EnvFile {
         this(Path.of(".env"));
     }
 
-    EnvFile(Path file) {
+    public EnvFile(Path file) {
         values = Collections.unmodifiableMap(readFile(file));
     }
 
@@ -41,6 +41,13 @@ public class EnvFile {
         } catch (NumberFormatException exception) {
             return defaultValue;
         }
+    }
+
+    public boolean getBoolean(String key, boolean defaultValue) {
+        String value = values.get(key);
+        return value == null || value.isBlank()
+                ? defaultValue
+                : Boolean.parseBoolean(value);
     }
 
     private Map<String, String> readFile(Path file) {

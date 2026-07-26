@@ -12,6 +12,23 @@ public record AnalysisReport(
         String geminiModel,
         int analyzedCommitCount,
         OffsetDateTime generatedAt,
-        GeminiAnalysis analysis
+        GeminiAnalysis analysis,
+        EmailDelivery emailDelivery
 ) {
+
+    public AnalysisReport withEmailDelivery(EmailDelivery delivery) {
+        return new AnalysisReport(
+                id,
+                repositoryUrl,
+                repositoryName,
+                defaultBranch,
+                projectDescription,
+                requestedEmail,
+                geminiModel,
+                analyzedCommitCount,
+                generatedAt,
+                analysis,
+                delivery
+        );
+    }
 }

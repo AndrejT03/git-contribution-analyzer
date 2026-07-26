@@ -60,6 +60,11 @@
 
       <button type="submit">Start analysis</button>
       <p class="privacy-note">The code is used only for the current analysis and is not stored.</p>
+
+      <div class="error-message"
+           th:if="${error}"
+           th:text="${error}">
+      </div>
     </form>
   </section>
 </main>

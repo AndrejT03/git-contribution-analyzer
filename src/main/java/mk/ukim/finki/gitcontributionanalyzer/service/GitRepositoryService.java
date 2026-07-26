@@ -90,7 +90,6 @@ public class GitRepositoryService {
                 "clone",
                 "--quiet",
                 "--no-checkout",
-                "--filter=blob:none",
                 url,
                 destination.toString()
         ), null, "The repository could not be cloned. Check that it is public and available.");

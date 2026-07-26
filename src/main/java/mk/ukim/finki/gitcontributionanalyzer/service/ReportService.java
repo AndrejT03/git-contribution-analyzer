@@ -1,11 +1,7 @@
 package mk.ukim.finki.gitcontributionanalyzer.service;
 import mk.ukim.finki.gitcontributionanalyzer.config.AppSettings;
-import mk.ukim.finki.gitcontributionanalyzer.model.AnalysisReport;
-import mk.ukim.finki.gitcontributionanalyzer.model.AnalysisRequest;
-import mk.ukim.finki.gitcontributionanalyzer.model.GeminiAnalysis;
-import mk.ukim.finki.gitcontributionanalyzer.model.RepositoryData;
+import mk.ukim.finki.gitcontributionanalyzer.model.*;
 import org.springframework.stereotype.Service;
-
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -16,12 +12,19 @@ public class ReportService {
     private final GeminiAnalysisService geminiAnalysisService;
     private final InMemoryReportStore reportStore;
     private final AppSettings settings;
+    private final EmailReportService emailReportService;
 
-    public ReportService(GitRepositoryService gitRepositoryService, GeminiAnalysisService geminiAnalysisService, InMemoryReportStore reportStore, AppSettings settings) {
+    public ReportService(
+            GitRepositoryService gitRepositoryService,
+            GeminiAnalysisService geminiAnalysisService,
+            InMemoryReportStore reportStore,
+            AppSettings settings,
+            EmailReportService emailReportService) {
         this.gitRepositoryService = gitRepositoryService;
         this.geminiAnalysisService = geminiAnalysisService;
         this.reportStore = reportStore;
         this.settings = settings;
+        this.emailReportService = emailReportService;
     }
 
     public AnalysisReport createReport(AnalysisRequest request) {
@@ -38,8 +41,12 @@ public class ReportService {
                 settings.geminiModel(),
                 repository.commits().size(),
                 OffsetDateTime.now(),
-                analysis
+                analysis,
+                EmailDelivery.pending()
         );
+
+        EmailDelivery delivery = emailReportService.sendReport(report);
+        report = report.withEmailDelivery(delivery);
         reportStore.save(report);
         return report;
     }

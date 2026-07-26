@@ -24,4 +24,28 @@ public class AppSettings {
     public String geminiModel() { return envFile.getOrDefault("GEMINI_MODEL", "gemini-3.6-flash").trim(); }
 
     public int geminiTimeoutSeconds() { return envFile.getInt("GEMINI_TIMEOUT_SECONDS", 180, 30, 600); }
+
+    public boolean mailEnabled() {
+        return envFile.getBoolean("MAIL_ENABLED", false);
+    }
+
+    public String mailHost() {
+        return envFile.getOrDefault("MAIL_HOST", "smtp.gmail.com").trim();
+    }
+
+    public int mailPort() {
+        return envFile.getInt("MAIL_PORT", 587, 1, 65535);
+    }
+
+    public String mailUsername() {
+        return envFile.getOrDefault("MAIL_USERNAME", "").trim();
+    }
+
+    public String mailPassword() {
+        return envFile.getOrDefault("MAIL_PASSWORD", "");
+    }
+
+    public String mailFrom() {
+        return envFile.getOrDefault("MAIL_FROM", mailUsername()).trim();
+    }
 }

@@ -206,6 +206,27 @@ button:hover {
     border-radius: 10px;
 }
 
+.delivery-note {
+    margin-top: 20px;
+    padding: 12px 14px;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: white;
+}
+
+.delivery-note.sent {
+    color: var(--success);
+    border-color: #b8dfcb;
+    background: #effbf4;
+}
+
+.delivery-note.failed {
+    color: var(--danger);
+    border-color: #efb8c0;
+    background: #fff1f3;
+}
+
 .error-message {
     color: var(--danger);
     border: 1px solid #efb8c0;

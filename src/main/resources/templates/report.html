@@ -31,7 +31,13 @@
     </section>
 
     <div class="new-report-note no-print" th:if="${newReport}">
-        Analysis completed successfully. The full report is shown below.
+        <strong>Analysis completed successfully.</strong>
+        <span th:text="${report.emailDelivery.message}">Email status.</span>
+    </div>
+
+    <div class="delivery-note no-print" th:unless="${newReport}"
+         th:classappend="${#strings.toLowerCase(report.emailDelivery.status)}">
+        <span th:text="${report.emailDelivery.message}">Email status.</span>
     </div>
 
     <section class="report-section two-columns">
