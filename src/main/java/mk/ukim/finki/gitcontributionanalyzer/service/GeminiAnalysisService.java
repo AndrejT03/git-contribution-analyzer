@@ -117,6 +117,13 @@ public class GeminiAnalysisService {
         if(analysis == null || analysis.contributors() == null || analysis.contributors().isEmpty()) {
             throw new GeminiException("The Gemini response contains no contributor analyses.");
         }
+        if (isBlank(analysis.projectSummary())
+                || isBlank(analysis.goalAlignment())
+                || isBlank(analysis.conclusion())
+                || isBlank(analysis.methodology())
+                || analysis.teamIndicators() == null) {
+            throw new GeminiException("Gemini returned an incomplete report.");
+        }
 
         int persentageSum = analysis.contributors().stream()
                 .mapToInt(ContributorAnalysis::contributionPercentage)
@@ -132,6 +139,15 @@ public class GeminiAnalysisService {
         int analyzedCommitCount = 0;
 
         for (ContributorAnalysis contributor: analysis.contributors()) {
+            if (isBlank(contributor.name())
+                    || isBlank(contributor.email())
+                    || isBlank(contributor.summary())
+                    || contributor.mainWork() == null
+                    || contributor.categorySummary() == null
+                    || contributor.riskFlags() == null) {
+                throw new GeminiException("Gemini returned incomplete contributor data.");
+            }
+
             if(contributor.contributionPercentage() < 0 || contributor.contributionPercentage() > 100) {
                 throw new GeminiException("Gemini returned an invalid contribution percentage.");
             }
@@ -140,7 +156,13 @@ public class GeminiAnalysisService {
             }
             for (CommitAnalysis commit : contributor.commitAnalyses()) {
                 analyzedCommitCount++;
-                if(commit.hash() == null || commit.importance() < 1 || commit.importance() > 5) {
+                if (isBlank(commit.hash())
+                        || commit.hash().length() < 7
+                        || isBlank(commit.message())
+                        || isBlank(commit.category())
+                        || isBlank(commit.explanation())
+                        || commit.importance() < 1
+                        || commit.importance() > 5) {
                     throw new GeminiException("Gemini returned an incomplete commit analysis.");
                 }
                 analyzedHashes.add(commit.hash());
@@ -150,6 +172,10 @@ public class GeminiAnalysisService {
         if(!analyzedHashes.equals(expectedHashes) || analyzedCommitCount != expectedHashes.size()) {
             throw new GeminiException("Gemini did not analyze every commit exactly once. Try again.");
         }
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     private String removeMarkdownFence(String text) {

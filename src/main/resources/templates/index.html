@@ -30,9 +30,9 @@
       <p>Public GitHub and GitLab repositories are currently supported.</p>
     </div>
 
-    <div class="success-message" th:if="${message}" th:text="${message}"></div>
+    <div class="error-message" th:if="${error}" th:text="${error}"></div>
 
-    <form th:action="@{/analyze}" th:object="${analysisRequest}" method="post">
+    <form id="analysisForm" th:action="@{/analyze}" th:object="${analysisRequest}" method="post">
       <div class="field">
         <label for="repositoryUrl">Repository URL</label>
         <input id="repositoryUrl" type="url" th:field="*{repositoryUrl}"
@@ -58,15 +58,19 @@
                th:errors="*{email}"></small>
       </div>
 
-      <button type="submit">Start analysis</button>
+      <button id="submitButton" type="submit">Start analysis</button>
       <p class="privacy-note">The code is used only for the current analysis and is not stored.</p>
-
-      <div class="error-message"
-           th:if="${error}"
-           th:text="${error}">
-      </div>
     </form>
   </section>
 </main>
+
+<div id="loadingOverlay" class="loading-overlay" hidden role="status" aria-live="polite">
+  <div class="loading-card">
+    <span class="spinner" aria-hidden="true"></span>
+    <h2>Gemini is analyzing the history</h2>
+    <p>The repository is being downloaded and its commits are being processed. This may take several minutes.</p>
+  </div>
+</div>
+<script th:src="@{/js/app.js}"></script>
 </body>
 </html>

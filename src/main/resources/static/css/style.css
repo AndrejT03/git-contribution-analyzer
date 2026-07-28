@@ -184,6 +184,12 @@ button:hover {
     transform: translateY(-1px);
 }
 
+button:disabled {
+    cursor: wait;
+    opacity: 0.72;
+    transform: none;
+}
+
 .privacy-note {
     margin: 12px 0 0;
     text-align: center;
@@ -225,6 +231,99 @@ button:hover {
     color: var(--danger);
     border-color: #efb8c0;
     background: #fff1f3;
+}
+
+.loading-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    padding: 20px;
+    display: grid;
+    place-items: center;
+    background: rgba(24, 32, 51, 0.55);
+    backdrop-filter: blur(7px);
+}
+
+.loading-overlay[hidden] {
+    display: none;
+}
+
+.loading-card {
+    width: min(440px, 100%);
+    padding: 34px;
+    text-align: center;
+    border-radius: 20px;
+    background: white;
+    box-shadow: 0 24px 80px rgba(18, 22, 42, 0.3);
+}
+
+.loading-card h2 {
+    margin: 20px 0 8px;
+}
+
+.loading-card p {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.6;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    display: inline-block;
+    border: 5px solid #e8e5ff;
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 800ms linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.error-page {
+    min-height: 100vh;
+    padding: 20px;
+    display: grid;
+    place-items: center;
+}
+
+.error-card {
+    width: min(540px, 100%);
+    padding: 44px;
+    text-align: center;
+    border: 1px solid white;
+    border-radius: 24px;
+    background: #ffffffea;
+    box-shadow: 0 24px 80px rgba(42, 50, 86, 0.14);
+}
+
+.error-code {
+    color: var(--primary);
+    font-size: 4rem;
+    font-weight: 900;
+}
+
+.error-card h1 {
+    margin: 10px 0;
+    font-size: 2rem;
+    letter-spacing: -0.03em;
+}
+
+.error-card p {
+    margin: 0 0 26px;
+    color: var(--muted);
+    line-height: 1.6;
+}
+
+.primary-link {
+    display: inline-block;
+    padding: 12px 18px;
+    color: white;
+    border-radius: 10px;
+    background: var(--primary);
+    font-weight: 800;
+    text-decoration: none;
 }
 
 .error-message {

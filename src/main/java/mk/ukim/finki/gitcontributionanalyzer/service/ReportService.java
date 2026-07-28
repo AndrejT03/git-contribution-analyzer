@@ -1,5 +1,6 @@
 package mk.ukim.finki.gitcontributionanalyzer.service;
 import mk.ukim.finki.gitcontributionanalyzer.config.AppSettings;
+import mk.ukim.finki.gitcontributionanalyzer.exception.ReportNotFoundException;
 import mk.ukim.finki.gitcontributionanalyzer.model.*;
 import org.springframework.stereotype.Service;
 import java.time.OffsetDateTime;
@@ -51,5 +52,5 @@ public class ReportService {
         return report;
     }
 
-    public AnalysisReport getReport(UUID id) { return reportStore.findById(id).orElseThrow(() -> new IllegalArgumentException("Report not found.")); }
+    public AnalysisReport getReport(UUID id) { return reportStore.findById(id).orElseThrow(() ->  new ReportNotFoundException("The report was not found, or the application was restarted.")); }
 }
