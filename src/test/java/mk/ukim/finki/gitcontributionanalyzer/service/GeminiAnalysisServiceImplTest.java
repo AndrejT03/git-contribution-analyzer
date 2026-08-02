@@ -1,6 +1,8 @@
 package mk.ukim.finki.gitcontributionanalyzer.service;
 import mk.ukim.finki.gitcontributionanalyzer.config.AppSettings;
 import mk.ukim.finki.gitcontributionanalyzer.dto.GeminiAnalysis;
+import mk.ukim.finki.gitcontributionanalyzer.service.impl.GeminiAnalysisServiceImpl;
+import mk.ukim.finki.gitcontributionanalyzer.service.impl.GeminiPromptBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
@@ -8,17 +10,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class GeminiAnalysisServiceTest {
+class GeminiAnalysisServiceImplTest {
 
     private ObjectMapper objectMapper;
-    private GeminiAnalysisService service;
+    private GeminiAnalysisServiceImpl service;
 
     @BeforeEach
     void setUp() {
         AppSettings settings = mock(AppSettings.class);
         when(settings.geminiTimeoutSeconds()).thenReturn(60);
         objectMapper = new ObjectMapper();
-        service = new GeminiAnalysisService(
+        service = new GeminiAnalysisServiceImpl(
                 settings,
                 mock(GeminiPromptBuilder.class),
                 objectMapper

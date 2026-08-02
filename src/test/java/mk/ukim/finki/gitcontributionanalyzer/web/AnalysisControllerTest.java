@@ -3,6 +3,7 @@ import mk.ukim.finki.gitcontributionanalyzer.dto.*;
 import mk.ukim.finki.gitcontributionanalyzer.exception.ReportNotFoundException;
 import mk.ukim.finki.gitcontributionanalyzer.model.*;
 import mk.ukim.finki.gitcontributionanalyzer.service.ReportService;
+import mk.ukim.finki.gitcontributionanalyzer.service.impl.ReportServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,14 +21,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 
-@WebMvcTest(HomeController.class)
-class HomeControllerTest {
+@WebMvcTest(AnalysisController.class)
+class AnalysisControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
     @MockitoBean
-    private ReportService reportService;
+    private ReportServiceImpl reportService;
 
     @Test
     void showsAnalysisForm() throws Exception {

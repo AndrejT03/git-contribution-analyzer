@@ -1,4 +1,4 @@
-package mk.ukim.finki.gitcontributionanalyzer.service;
+package mk.ukim.finki.gitcontributionanalyzer.service.impl;
 import mk.ukim.finki.gitcontributionanalyzer.exception.GeminiException;
 import mk.ukim.finki.gitcontributionanalyzer.model.RepositoryData;
 import org.springframework.stereotype.Component;

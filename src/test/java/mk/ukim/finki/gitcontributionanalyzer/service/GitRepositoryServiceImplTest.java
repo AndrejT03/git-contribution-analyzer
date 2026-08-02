@@ -1,19 +1,20 @@
 package mk.ukim.finki.gitcontributionanalyzer.service;
 import mk.ukim.finki.gitcontributionanalyzer.config.AppSettings;
 import mk.ukim.finki.gitcontributionanalyzer.exception.RepositoryException;
+import mk.ukim.finki.gitcontributionanalyzer.service.impl.GitRepositoryServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
-class GitRepositoryServiceTest {
+class GitRepositoryServiceImplTest {
 
-    private GitRepositoryService service;
+    private GitRepositoryServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new GitRepositoryService(mock(AppSettings.class));
+        service = new GitRepositoryServiceImpl(mock(AppSettings.class));
     }
 
     @Test

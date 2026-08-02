@@ -1,6 +1,7 @@
 package mk.ukim.finki.gitcontributionanalyzer.service;
 import mk.ukim.finki.gitcontributionanalyzer.config.AppSettings;
 import mk.ukim.finki.gitcontributionanalyzer.model.EmailDelivery;
+import mk.ukim.finki.gitcontributionanalyzer.service.impl.EmailReportServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.thymeleaf.spring6.SpringTemplateEngine;
@@ -9,17 +10,17 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-class EmailReportServiceTest {
+class EmailReportServiceImplTest {
 
     private AppSettings settings;
     private SpringTemplateEngine templateEngine;
-    private EmailReportService service;
+    private EmailReportServiceImpl service;
 
     @BeforeEach
     void setUp() {
         settings = mock(AppSettings.class);
         templateEngine = mock(SpringTemplateEngine.class);
-        service = new EmailReportService(settings, templateEngine);
+        service = new EmailReportServiceImpl(settings, templateEngine);
     }
 
     @Test

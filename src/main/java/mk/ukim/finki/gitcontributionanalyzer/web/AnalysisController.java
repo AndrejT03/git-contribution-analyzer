@@ -4,7 +4,7 @@ import mk.ukim.finki.gitcontributionanalyzer.exception.*;
 import mk.ukim.finki.gitcontributionanalyzer.model.AnalysisReport;
 import mk.ukim.finki.gitcontributionanalyzer.dto.AnalysisRequest;
 import jakarta.validation.Valid;
-import mk.ukim.finki.gitcontributionanalyzer.service.ReportService;
+import mk.ukim.finki.gitcontributionanalyzer.service.impl.ReportServiceImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -16,13 +16,13 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.util.UUID;
 
 @Controller
-public class HomeController {
-    private static final Logger LOGGER = LoggerFactory.getLogger(HomeController.class);
+public class AnalysisController {
+    private static final Logger LOGGER = LoggerFactory.getLogger(AnalysisController.class);
 
-    public final ReportService reportService;
+    public final ReportServiceImpl reportServiceImpl;
 
-    public HomeController(ReportService reportService) {
-        this.reportService = reportService;
+    public AnalysisController(ReportServiceImpl reportServiceImpl) {
+        this.reportServiceImpl = reportServiceImpl;
     }
 
     @GetMapping("/")
@@ -44,7 +44,7 @@ public class HomeController {
         }
 
         try{
-            AnalysisReport report = reportService.createReport(analysisRequest);
+            AnalysisReport report = reportServiceImpl.createReport(analysisRequest);
             redirectAttributes.addFlashAttribute("newReport", true);
             return "redirect:/reports/" + report.id();
         } catch(RepositoryException | GeminiException e) {
@@ -58,7 +58,7 @@ public class HomeController {
     @GetMapping("/reports/{id}")
     public String showReport(@PathVariable UUID id, Model model, HttpServletResponse response) {
         try {
-            model.addAttribute("report", reportService.getReport(id));
+            model.addAttribute("report", reportServiceImpl.getReport(id));
             return "report";
         } catch (ReportNotFoundException exception) {
             return errorPage(
