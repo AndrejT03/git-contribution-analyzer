@@ -1,4 +1,5 @@
 package mk.ukim.finki.gitcontributionanalyzer.web;
+import mk.ukim.finki.gitcontributionanalyzer.dto.*;
 import mk.ukim.finki.gitcontributionanalyzer.exception.ReportNotFoundException;
 import mk.ukim.finki.gitcontributionanalyzer.model.*;
 import mk.ukim.finki.gitcontributionanalyzer.service.ReportService;

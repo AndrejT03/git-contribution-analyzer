@@ -1,5 +1,7 @@
 package mk.ukim.finki.gitcontributionanalyzer.service;
 import mk.ukim.finki.gitcontributionanalyzer.config.AppSettings;
+import mk.ukim.finki.gitcontributionanalyzer.dto.AnalysisRequest;
+import mk.ukim.finki.gitcontributionanalyzer.dto.GeminiAnalysis;
 import mk.ukim.finki.gitcontributionanalyzer.exception.ReportNotFoundException;
 import mk.ukim.finki.gitcontributionanalyzer.model.*;
 import org.springframework.stereotype.Service;

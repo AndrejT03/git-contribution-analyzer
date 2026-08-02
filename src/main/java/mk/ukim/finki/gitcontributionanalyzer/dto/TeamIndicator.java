@@ -1,4 +1,4 @@
-package mk.ukim.finki.gitcontributionanalyzer.model;
+package mk.ukim.finki.gitcontributionanalyzer.dto;
 
 public record TeamIndicator(
         String type,

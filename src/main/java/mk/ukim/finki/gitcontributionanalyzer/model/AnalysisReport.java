@@ -1,4 +1,5 @@
 package mk.ukim.finki.gitcontributionanalyzer.model;
+import mk.ukim.finki.gitcontributionanalyzer.dto.GeminiAnalysis;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 

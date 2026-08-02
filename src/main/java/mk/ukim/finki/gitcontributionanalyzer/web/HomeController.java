@@ -2,7 +2,7 @@ package mk.ukim.finki.gitcontributionanalyzer.web;
 import jakarta.servlet.http.HttpServletResponse;
 import mk.ukim.finki.gitcontributionanalyzer.exception.*;
 import mk.ukim.finki.gitcontributionanalyzer.model.AnalysisReport;
-import mk.ukim.finki.gitcontributionanalyzer.model.AnalysisRequest;
+import mk.ukim.finki.gitcontributionanalyzer.dto.AnalysisRequest;
 import jakarta.validation.Valid;
 import mk.ukim.finki.gitcontributionanalyzer.service.ReportService;
 import org.slf4j.Logger;

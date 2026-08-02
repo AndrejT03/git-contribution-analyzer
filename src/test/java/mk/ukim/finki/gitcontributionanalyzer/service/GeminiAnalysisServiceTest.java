@@ -1,6 +1,6 @@
 package mk.ukim.finki.gitcontributionanalyzer.service;
 import mk.ukim.finki.gitcontributionanalyzer.config.AppSettings;
-import mk.ukim.finki.gitcontributionanalyzer.model.GeminiAnalysis;
+import mk.ukim.finki.gitcontributionanalyzer.dto.GeminiAnalysis;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;

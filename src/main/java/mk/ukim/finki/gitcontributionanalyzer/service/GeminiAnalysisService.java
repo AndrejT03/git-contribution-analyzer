@@ -1,9 +1,9 @@
 package mk.ukim.finki.gitcontributionanalyzer.service;
 import mk.ukim.finki.gitcontributionanalyzer.config.AppSettings;
 import mk.ukim.finki.gitcontributionanalyzer.exception.GeminiException;
-import mk.ukim.finki.gitcontributionanalyzer.model.CommitAnalysis;
-import mk.ukim.finki.gitcontributionanalyzer.model.ContributorAnalysis;
-import mk.ukim.finki.gitcontributionanalyzer.model.GeminiAnalysis;
+import mk.ukim.finki.gitcontributionanalyzer.dto.CommitAnalysis;
+import mk.ukim.finki.gitcontributionanalyzer.dto.ContributorAnalysis;
+import mk.ukim.finki.gitcontributionanalyzer.dto.GeminiAnalysis;
 import mk.ukim.finki.gitcontributionanalyzer.model.RepositoryData;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
@@ -97,7 +97,7 @@ public class GeminiAnalysisService {
                 .path("parts")
                 .path(0)
                 .path("text")
-                .asText();
+                .asString("");
 
         if (json.isBlank()) {
             String reason = response.path("promptFeedback").path("blockReason").asText();

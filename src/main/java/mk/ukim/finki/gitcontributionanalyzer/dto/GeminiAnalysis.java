@@ -1,4 +1,5 @@
-package mk.ukim.finki.gitcontributionanalyzer.model;
+package mk.ukim.finki.gitcontributionanalyzer.dto;
+
 import java.util.List;
 
 public record GeminiAnalysis(

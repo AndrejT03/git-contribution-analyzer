@@ -1,4 +1,4 @@
-package mk.ukim.finki.gitcontributionanalyzer.model;
+package mk.ukim.finki.gitcontributionanalyzer.dto;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
