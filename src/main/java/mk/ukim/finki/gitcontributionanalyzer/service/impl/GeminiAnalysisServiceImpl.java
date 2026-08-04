@@ -3,7 +3,7 @@ import mk.ukim.finki.gitcontributionanalyzer.config.AppSettings;
 import mk.ukim.finki.gitcontributionanalyzer.exception.GeminiException;
 import mk.ukim.finki.gitcontributionanalyzer.dto.CommitAnalysis;
 import mk.ukim.finki.gitcontributionanalyzer.dto.ContributorAnalysis;
-import mk.ukim.finki.gitcontributionanalyzer.dto.GeminiAnalysis;
+import mk.ukim.finki.gitcontributionanalyzer.dto.ContributionAnalysis;
 import mk.ukim.finki.gitcontributionanalyzer.model.RepositoryData;
 import mk.ukim.finki.gitcontributionanalyzer.service.GeminiAnalysisService;
 import org.springframework.http.MediaType;
@@ -53,7 +53,7 @@ public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
     }
 
     @Override
-    public GeminiAnalysis analyze(String projectDescription, RepositoryData repositoryData) {
+    public ContributionAnalysis analyze(String projectDescription, RepositoryData repositoryData) {
         requireApiKey();
         String Prompt = promptBuilder.build(projectDescription, repositoryData);
 
@@ -78,7 +78,7 @@ public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
                     .retrieve()
                     .body(JsonNode.class);
 
-            GeminiAnalysis analysis = parseResponse(response);
+            ContributionAnalysis analysis = parseResponse(response);
             validateResponse(analysis, repositoryData);
             return analysis;
         } catch (RestClientException e) {
@@ -93,7 +93,7 @@ public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
         }
     }
 
-    public GeminiAnalysis parseResponse(JsonNode response) {
+    public ContributionAnalysis parseResponse(JsonNode response) {
         if (response == null) {
             throw new GeminiException("Gemini returned an empty response.");
         }
@@ -107,20 +107,20 @@ public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
                 .asString("");
 
         if (json.isBlank()) {
-            String reason = response.path("promptFeedback").path("blockReason").asText();
+            String reason = response.path("promptFeedback").path("blockReason").asString("");
             throw new GeminiException(reason.isBlank()
                     ? "Gemini did not return an analysis."
                     : "Gemini rejected the request: " + reason);
         }
 
         try {
-            return objectMapper.readValue(removeMarkdownFence(json), GeminiAnalysis.class);
+            return objectMapper.readValue(removeMarkdownFence(json), ContributionAnalysis.class);
         } catch (JacksonException exception) {
             throw new GeminiException("Gemini returned a response that is not a valid JSON report.", exception);
         }
     }
 
-    public void validateResponse(GeminiAnalysis analysis, RepositoryData repositoryData) {
+    public void validateResponse(ContributionAnalysis analysis, RepositoryData repositoryData) {
         if(analysis == null || analysis.contributors() == null || analysis.contributors().isEmpty()) {
             throw new GeminiException("The Gemini response contains no contributor analyses.");
         }

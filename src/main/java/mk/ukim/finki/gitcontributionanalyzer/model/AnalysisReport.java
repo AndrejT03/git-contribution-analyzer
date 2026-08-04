@@ -1,5 +1,5 @@
 package mk.ukim.finki.gitcontributionanalyzer.model;
-import mk.ukim.finki.gitcontributionanalyzer.dto.GeminiAnalysis;
+import mk.ukim.finki.gitcontributionanalyzer.dto.ContributionAnalysis;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -10,10 +10,12 @@ public record AnalysisReport(
         String defaultBranch,
         String projectDescription,
         String requestedEmail,
-        String geminiModel,
+        String analysisSource,
+        String analysisModel,
+        String analysisNotice,
         int analyzedCommitCount,
         OffsetDateTime generatedAt,
-        GeminiAnalysis analysis,
+        ContributionAnalysis analysis,
         EmailDelivery emailDelivery
 ) {
 
@@ -25,7 +27,9 @@ public record AnalysisReport(
                 defaultBranch,
                 projectDescription,
                 requestedEmail,
-                geminiModel,
+                analysisSource,
+                analysisModel,
+                analysisNotice,
                 analyzedCommitCount,
                 generatedAt,
                 analysis,

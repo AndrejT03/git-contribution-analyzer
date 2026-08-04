@@ -1,6 +1,6 @@
 package mk.ukim.finki.gitcontributionanalyzer.service;
 import mk.ukim.finki.gitcontributionanalyzer.config.AppSettings;
-import mk.ukim.finki.gitcontributionanalyzer.dto.GeminiAnalysis;
+import mk.ukim.finki.gitcontributionanalyzer.dto.ContributionAnalysis;
 import mk.ukim.finki.gitcontributionanalyzer.service.impl.GeminiAnalysisServiceImpl;
 import mk.ukim.finki.gitcontributionanalyzer.service.impl.GeminiPromptBuilder;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,7 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class GeminiAnalysisServiceImplTest {
+class ContributionAnalysisServiceImplTest {
 
     private ObjectMapper objectMapper;
     private GeminiAnalysisServiceImpl service;
@@ -58,7 +58,7 @@ class GeminiAnalysisServiceImplTest {
                 .addObject()
                 .put("text", analysisJson);
 
-        GeminiAnalysis analysis = service.parseResponse(response);
+        ContributionAnalysis analysis = service.parseResponse(response);
 
         assertThat(analysis.projectSummary()).isEqualTo("Team web project.");
         assertThat(analysis.contributors()).hasSize(1);

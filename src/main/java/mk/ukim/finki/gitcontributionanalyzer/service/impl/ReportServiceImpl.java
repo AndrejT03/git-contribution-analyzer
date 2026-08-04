@@ -1,7 +1,7 @@
 package mk.ukim.finki.gitcontributionanalyzer.service.impl;
 import mk.ukim.finki.gitcontributionanalyzer.config.AppSettings;
 import mk.ukim.finki.gitcontributionanalyzer.dto.AnalysisRequest;
-import mk.ukim.finki.gitcontributionanalyzer.dto.GeminiAnalysis;
+import mk.ukim.finki.gitcontributionanalyzer.dto.ContributionAnalysis;
 import mk.ukim.finki.gitcontributionanalyzer.exception.ReportNotFoundException;
 import mk.ukim.finki.gitcontributionanalyzer.model.*;
 import mk.ukim.finki.gitcontributionanalyzer.repository.AnalysisReportRepository;
@@ -35,7 +35,7 @@ public class ReportServiceImpl implements ReportService {
     @Override
     public AnalysisReport createReport(AnalysisRequest request) {
         RepositoryData repository = gitRepositoryServiceImpl.readRepository(request.getRepositoryUrl());
-        GeminiAnalysis analysis = geminiAnalysisServiceImpl.analyze(request.getProjectDescription(), repository);
+        ContributionAnalysis analysis = geminiAnalysisServiceImpl.analyze(request.getProjectDescription(), repository);
 
         AnalysisReport report = new AnalysisReport(
                 UUID.randomUUID(),
@@ -44,7 +44,9 @@ public class ReportServiceImpl implements ReportService {
                 repository.defaultBranch(),
                 request.getProjectDescription(),
                 request.getEmail(),
+                "Gemini AI",
                 settings.geminiModel(),
+                "Gemini analyzed the Git history using the supplied project goal.",
                 repository.commits().size(),
                 OffsetDateTime.now(),
                 analysis,
