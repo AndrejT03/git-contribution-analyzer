@@ -2,10 +2,13 @@ package mk.ukim.finki.gitcontributionanalyzer.service.impl;
 import mk.ukim.finki.gitcontributionanalyzer.config.AppSettings;
 import mk.ukim.finki.gitcontributionanalyzer.dto.AnalysisRequest;
 import mk.ukim.finki.gitcontributionanalyzer.dto.ContributionAnalysis;
-import mk.ukim.finki.gitcontributionanalyzer.exception.ReportNotFoundException;
+import mk.ukim.finki.gitcontributionanalyzer.enums.AnalysisSource;
+import mk.ukim.finki.gitcontributionanalyzer.exception.*;
 import mk.ukim.finki.gitcontributionanalyzer.model.*;
 import mk.ukim.finki.gitcontributionanalyzer.repository.AnalysisReportRepository;
-import mk.ukim.finki.gitcontributionanalyzer.service.ReportService;
+import mk.ukim.finki.gitcontributionanalyzer.service.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -13,29 +16,50 @@ import java.util.UUID;
 @Service
 public class ReportServiceImpl implements ReportService {
 
-    private final GitRepositoryServiceImpl gitRepositoryServiceImpl;
-    private final GeminiAnalysisServiceImpl geminiAnalysisServiceImpl;
+    private static final Logger LOGGER = LoggerFactory.getLogger(ReportServiceImpl.class);
+
+    private final GitRepositoryService gitRepositoryService;
+    private final GeminiAnalysisService geminiAnalysisService;
+    private final LocalAnalysisService localAnalysisService;
     private final AnalysisReportRepository reportRepository;
     private final AppSettings settings;
-    private final EmailReportServiceImpl emailReportServiceImpl;
+    private final EmailReportService emailReportService;
 
     public ReportServiceImpl(
-            GitRepositoryServiceImpl gitRepositoryServiceImpl,
-            GeminiAnalysisServiceImpl geminiAnalysisServiceImpl,
+            GitRepositoryService gitRepositoryService,
+            GeminiAnalysisService geminiAnalysisService,
+            LocalAnalysisService localAnalysisService,
             AnalysisReportRepository reportRepository,
             AppSettings settings,
-            EmailReportServiceImpl emailReportServiceImpl) {
-        this.gitRepositoryServiceImpl = gitRepositoryServiceImpl;
-        this.geminiAnalysisServiceImpl = geminiAnalysisServiceImpl;
+            EmailReportService emailReportService) {
+        this.gitRepositoryService = gitRepositoryService;
+        this.geminiAnalysisService = geminiAnalysisService;
+        this.localAnalysisService = localAnalysisService;
         this.reportRepository = reportRepository;
         this.settings = settings;
-        this.emailReportServiceImpl = emailReportServiceImpl;
+        this.emailReportService = emailReportService;
     }
 
     @Override
     public AnalysisReport createReport(AnalysisRequest request) {
-        RepositoryData repository = gitRepositoryServiceImpl.readRepository(request.getRepositoryUrl());
-        ContributionAnalysis analysis = geminiAnalysisServiceImpl.analyze(request.getProjectDescription(), repository);
+        RepositoryData repository = gitRepositoryService.readRepository(request.getRepositoryUrl());
+        ContributionAnalysis analysis;
+        AnalysisSource analysisSource;
+        String analysisModel;
+        String analysisNotice;
+
+        try {
+            analysis = geminiAnalysisService.analyze(request.getProjectDescription(), repository);
+            analysisSource = AnalysisSource.GEMINI;
+            analysisModel = settings.geminiModel();
+            analysisNotice = "Gemini analyzed the Git history using the supplied project goal.";
+        } catch (GeminiException exception) {
+            LOGGER.warn("Gemini analysis failed; using the local fallback. Reason: {}", exception.getMessage());
+            analysis = localAnalysisService.analyze(request.getProjectDescription(), repository);
+            analysisSource = AnalysisSource.LOCAL_FALLBACK;
+            analysisModel = "Built-in heuristic rules";
+            analysisNotice = "Gemini could not produce a usable analysis, so this report was generated with the built-in local heuristic analyzer.";
+        }
 
         AnalysisReport report = new AnalysisReport(
                 UUID.randomUUID(),
@@ -44,16 +68,16 @@ public class ReportServiceImpl implements ReportService {
                 repository.defaultBranch(),
                 request.getProjectDescription(),
                 request.getEmail(),
-                "Gemini AI",
-                settings.geminiModel(),
-                "Gemini analyzed the Git history using the supplied project goal.",
+                analysisSource,
+                analysisModel,
+                analysisNotice,
                 repository.commits().size(),
                 OffsetDateTime.now(),
                 analysis,
                 EmailDelivery.pending()
         );
 
-        EmailDelivery delivery = emailReportServiceImpl.sendReport(report);
+        EmailDelivery delivery = emailReportService.sendReport(report);
         report = report.withEmailDelivery(delivery);
         reportRepository.save(report);
         return report;

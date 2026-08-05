@@ -1,8 +1,9 @@
 package mk.ukim.finki.gitcontributionanalyzer.dto;
+import mk.ukim.finki.gitcontributionanalyzer.enums.TeamIndicatorSeverity;
 
 public record TeamIndicator(
         String type,
-        String severity,
+        TeamIndicatorSeverity severity,
         String title,
         String explanation
 ) {

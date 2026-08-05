@@ -1,5 +1,6 @@
 package mk.ukim.finki.gitcontributionanalyzer.service.impl;
 import mk.ukim.finki.gitcontributionanalyzer.config.AppSettings;
+import mk.ukim.finki.gitcontributionanalyzer.enums.ContributionLevel;
 import mk.ukim.finki.gitcontributionanalyzer.exception.GeminiException;
 import mk.ukim.finki.gitcontributionanalyzer.dto.CommitAnalysis;
 import mk.ukim.finki.gitcontributionanalyzer.dto.ContributorAnalysis;
@@ -16,10 +17,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import java.net.http.HttpClient;
 import java.time.Duration;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 @Service
 public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
@@ -121,52 +119,67 @@ public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
     }
 
     public void validateResponse(ContributionAnalysis analysis, RepositoryData repositoryData) {
-        if(analysis == null || analysis.contributors() == null || analysis.contributors().isEmpty()) {
+        if (analysis == null || analysis.contributors() == null || analysis.contributors().isEmpty()) {
             throw new GeminiException("The Gemini response contains no contributor analyses.");
+        }
+        if (analysis.contributors().stream().anyMatch(Objects::isNull)) {
+            throw new GeminiException("Gemini returned incomplete contributor data.");
         }
         if (isBlank(analysis.projectSummary())
                 || isBlank(analysis.goalAlignment())
                 || isBlank(analysis.conclusion())
                 || isBlank(analysis.methodology())
-                || analysis.teamIndicators() == null) {
+                || analysis.teamIndicators() == null
+                || analysis.teamIndicators().stream().anyMatch(indicator -> indicator == null
+                || indicator.severity() == null)) {
             throw new GeminiException("Gemini returned an incomplete report.");
         }
 
-        int persentageSum = analysis.contributors().stream()
+        int percentageSum = analysis.contributors().stream()
                 .mapToInt(ContributorAnalysis::contributionPercentage)
                 .sum();
-        if (persentageSum != 100) {
-            throw new GeminiException("Gemini percentages do not add up to 100%. Try again.");
+        if (percentageSum != 100) {
+            throw new GeminiException("Gemini percentages do not add up to 100. Try again.");
         }
 
         Set<String> expectedHashes = new HashSet<>();
-        repositoryData.commits().forEach(commit-> expectedHashes.add(commit.hash()));
+        repositoryData.commits().forEach(commit -> expectedHashes.add(commit.hash()));
 
         Set<String> analyzedHashes = new HashSet<>();
         int analyzedCommitCount = 0;
-
-        for (ContributorAnalysis contributor: analysis.contributors()) {
+        for (ContributorAnalysis contributor : analysis.contributors()) {
             if (isBlank(contributor.name())
                     || isBlank(contributor.email())
+                    || contributor.contributionLevel() == null
                     || isBlank(contributor.summary())
                     || contributor.mainWork() == null
                     || contributor.categorySummary() == null
+                    || contributor.categorySummary().stream().anyMatch(summary -> summary == null
+                    || summary.category() == null)
                     || contributor.riskFlags() == null) {
                 throw new GeminiException("Gemini returned incomplete contributor data.");
             }
-
-            if(contributor.contributionPercentage() < 0 || contributor.contributionPercentage() > 100) {
+            if (contributor.contributionPercentage() < 0 || contributor.contributionPercentage() > 100) {
                 throw new GeminiException("Gemini returned an invalid contribution percentage.");
             }
-            if(contributor.commitAnalyses() == null) {
+            ContributionLevel expectedLevel = ContributionLevel.fromPercentage(
+                    contributor.contributionPercentage()
+            );
+            if (contributor.contributionLevel() != expectedLevel) {
+                throw new GeminiException("Gemini returned a contribution level that does not match its percentage.");
+            }
+            if (contributor.commitAnalyses() == null) {
                 throw new GeminiException("Gemini did not return commit analyses for every contributor.");
             }
             for (CommitAnalysis commit : contributor.commitAnalyses()) {
+                if (commit == null) {
+                    throw new GeminiException("Gemini returned an incomplete commit analysis.");
+                }
                 analyzedCommitCount++;
                 if (isBlank(commit.hash())
                         || commit.hash().length() < 7
                         || isBlank(commit.message())
-                        || isBlank(commit.category())
+                        || commit.category() == null
                         || isBlank(commit.explanation())
                         || commit.importance() < 1
                         || commit.importance() > 5) {
@@ -176,10 +189,11 @@ public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
             }
         }
 
-        if(!analyzedHashes.equals(expectedHashes) || analyzedCommitCount != expectedHashes.size()) {
+        if (!analyzedHashes.equals(expectedHashes) || analyzedCommitCount != expectedHashes.size()) {
             throw new GeminiException("Gemini did not analyze every commit exactly once. Try again.");
         }
     }
+
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();

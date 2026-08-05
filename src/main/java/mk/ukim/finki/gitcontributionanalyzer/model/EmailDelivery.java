@@ -1,11 +1,12 @@
 package mk.ukim.finki.gitcontributionanalyzer.model;
+import mk.ukim.finki.gitcontributionanalyzer.enums.EmailDeliveryStatus;
 
 public record EmailDelivery(
-        String status,
+        EmailDeliveryStatus status,
         String message
 ) {
 
     public static EmailDelivery pending() {
-        return new EmailDelivery("PENDING", "The email report has not been sent yet.");
+        return new EmailDelivery(EmailDeliveryStatus.PENDING, "The email report has not been sent yet.");
     }
 }

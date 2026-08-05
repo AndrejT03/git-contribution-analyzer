@@ -1,5 +1,6 @@
 package mk.ukim.finki.gitcontributionanalyzer.service;
 import mk.ukim.finki.gitcontributionanalyzer.config.AppSettings;
+import mk.ukim.finki.gitcontributionanalyzer.enums.EmailDeliveryStatus;
 import mk.ukim.finki.gitcontributionanalyzer.model.EmailDelivery;
 import mk.ukim.finki.gitcontributionanalyzer.service.impl.EmailReportServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,7 +30,7 @@ class EmailReportServiceImplTest {
 
         EmailDelivery result = service.sendReport(null);
 
-        assertThat(result.status()).isEqualTo("DISABLED");
+        assertThat(result.status()).isEqualTo(EmailDeliveryStatus.DISABLED);
         verifyNoInteractions(templateEngine);
     }
 
@@ -40,7 +41,7 @@ class EmailReportServiceImplTest {
 
         EmailDelivery result = service.sendReport(null);
 
-        assertThat(result.status()).isEqualTo("FAILED");
+        assertThat(result.status()).isEqualTo(EmailDeliveryStatus.FAILED);
         assertThat(result.message()).contains("SMTP settings are missing");
         verifyNoInteractions(templateEngine);
     }

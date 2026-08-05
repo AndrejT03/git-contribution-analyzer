@@ -18,7 +18,7 @@
 <main class="report-shell">
     <section class="report-hero">
         <div>
-            <span class="badge" th:text="${report.analysisSource} + ' Report'">Contribution Analysis Report</span>
+            <span class="badge" th:text="${report.analysisSource.displayName()} + ' Report'">Contribution Analysis Report</span>
             <h1 th:text="${report.repositoryName}">Project name</h1>
             <p class="lead" th:text="${report.analysis.projectSummary}">Short summary.</p>
         </div>
@@ -31,7 +31,7 @@
     </section>
 
     <div class="new-report-note">
-        <strong th:text="${report.analysisSource}">Analysis source</strong>
+        <strong th:text="${report.analysisSource.displayName()}">Analysis source</strong>
         <span th:text="${report.analysisNotice}">Analysis details.</span>
     </div>
 
@@ -41,7 +41,7 @@
     </div>
 
     <div class="delivery-note no-print" th:unless="${newReport}"
-         th:classappend="${#strings.toLowerCase(report.emailDelivery.status)}">
+         th:classappend="${report.emailDelivery.status.cssClass()}">
         <span th:text="${report.emailDelivery.message}">Email status.</span>
     </div>
 
@@ -59,7 +59,7 @@
     <section class="report-section">
         <div class="section-heading">
             <p class="eyebrow">Contribution by member</p>
-            <h2>Distribution of actual work</h2>
+            <h2>Estimated distribution of Git-visible contribution</h2>
         </div>
 
         <article class="contributor-card" th:each="contributor : ${report.analysis.contributors}">
@@ -70,7 +70,7 @@
                 </div>
                 <div class="score">
                     <strong th:text="${contributor.contributionPercentage} + '%'">0%</strong>
-                    <span th:text="${contributor.contributionLevel}">Level</span>
+                    <span th:text="${contributor.contributionLevel.displayName()}">Level</span>
                 </div>
             </div>
 
@@ -129,7 +129,7 @@
         </div>
         <div class="indicator-grid">
             <article class="indicator-card" th:each="indicator : ${report.analysis.teamIndicators}"
-                     th:classappend="${#strings.toLowerCase(indicator.severity)}">
+                     th:classappend="${indicator.severity.cssClass()}">
                 <span th:text="${indicator.severity}">INFO</span>
                 <h3 th:text="${indicator.title}">Title</h3>
                 <p th:text="${indicator.explanation}">Explanation.</p>

@@ -1,5 +1,6 @@
 package mk.ukim.finki.gitcontributionanalyzer.model;
 import mk.ukim.finki.gitcontributionanalyzer.dto.ContributionAnalysis;
+import mk.ukim.finki.gitcontributionanalyzer.enums.AnalysisSource;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -10,7 +11,7 @@ public record AnalysisReport(
         String defaultBranch,
         String projectDescription,
         String requestedEmail,
-        String analysisSource,
+        AnalysisSource analysisSource,
         String analysisModel,
         String analysisNotice,
         int analyzedCommitCount,

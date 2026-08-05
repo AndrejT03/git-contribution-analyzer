@@ -1,5 +1,6 @@
 package mk.ukim.finki.gitcontributionanalyzer.service;
 import mk.ukim.finki.gitcontributionanalyzer.dto.CommitAnalysis;
+import mk.ukim.finki.gitcontributionanalyzer.enums.CommitCategory;
 import mk.ukim.finki.gitcontributionanalyzer.model.ChangedFile;
 import mk.ukim.finki.gitcontributionanalyzer.model.GitCommit;
 import mk.ukim.finki.gitcontributionanalyzer.service.impl.LocalCommitClassifier;
@@ -21,7 +22,7 @@ class LocalCommitClassifierTest {
 
         CommitAnalysis result = classifier.analyze(commit, "Team planning application");
 
-        assertThat(result.category()).isEqualTo("DOCUMENTATION");
+        assertThat(result.category()).isEqualTo(CommitCategory.DOCUMENTATION);
         assertThat(result.importance()).isEqualTo(2);
     }
 
@@ -34,7 +35,7 @@ class LocalCommitClassifierTest {
 
         CommitAnalysis result = classifier.analyze(commit, "Secure login application");
 
-        assertThat(result.category()).isEqualTo("BUG_FIX");
+        assertThat(result.category()).isEqualTo(CommitCategory.BUG_FIX);
         assertThat(result.importance()).isEqualTo(3);
     }
 
@@ -47,8 +48,37 @@ class LocalCommitClassifierTest {
 
         CommitAnalysis result = classifier.analyze(commit, "Secure login application");
 
-        assertThat(result.category()).isEqualTo("TESTING");
+        assertThat(result.category()).isEqualTo(CommitCategory.TESTING);
         assertThat(result.hash()).isEqualTo("1234567890abcdef");
+    }
+
+    @Test
+    void doesNotClassifyPartialWordsAsTestsOrBugFixes() {
+        GitCommit commit = commit(
+                "Add prefix support",
+                List.of(new ChangedFile("src/LatestService.java", 20, 2))
+        );
+
+        CommitAnalysis result = classifier.analyze(commit, "Secure planning tool");
+
+        assertThat(result.category()).isEqualTo(CommitCategory.FUNCTIONAL);
+    }
+
+    @Test
+    void limitsGeneratedAndDependencyFiles() {
+        CommitAnalysis generated = classifier.analyze(
+                commit("Add browser bundle", List.of(new ChangedFile("web/vendor/app.min.js", 2000, 0))),
+                "Browser dashboard"
+        );
+        CommitAnalysis lockFile = classifier.analyze(
+                commit("Update packages", List.of(new ChangedFile("package-lock.json", 2000, 500))),
+                "Browser dashboard"
+        );
+
+        assertThat(generated.category()).isEqualTo(CommitCategory.OTHER);
+        assertThat(generated.importance()).isEqualTo(1);
+        assertThat(lockFile.category()).isEqualTo(CommitCategory.CONFIGURATION);
+        assertThat(lockFile.importance()).isLessThanOrEqualTo(3);
     }
 
     private GitCommit commit(String message, List<ChangedFile> files) {

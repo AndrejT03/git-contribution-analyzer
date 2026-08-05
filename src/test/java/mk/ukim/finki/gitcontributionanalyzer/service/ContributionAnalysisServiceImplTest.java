@@ -1,12 +1,18 @@
 package mk.ukim.finki.gitcontributionanalyzer.service;
 import mk.ukim.finki.gitcontributionanalyzer.config.AppSettings;
 import mk.ukim.finki.gitcontributionanalyzer.dto.ContributionAnalysis;
+import mk.ukim.finki.gitcontributionanalyzer.dto.ContributorAnalysis;
+import mk.ukim.finki.gitcontributionanalyzer.enums.*;
+import mk.ukim.finki.gitcontributionanalyzer.exception.GeminiException;
+import mk.ukim.finki.gitcontributionanalyzer.model.RepositoryData;
 import mk.ukim.finki.gitcontributionanalyzer.service.impl.GeminiAnalysisServiceImpl;
 import mk.ukim.finki.gitcontributionanalyzer.service.impl.GeminiPromptBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
+import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -37,14 +43,19 @@ class ContributionAnalysisServiceImplTest {
                     "name": "Ana",
                     "email": "ana@example.com",
                     "contributionPercentage": 100,
-                    "contributionLevel": "High",
+                    "contributionLevel": "HIGH",
                     "summary": "She implemented the core functionality.",
                     "mainWork": ["User login"],
                     "categorySummary": [{"category":"FUNCTIONAL","commitCount":1,"explanation":"Core functionality"}],
                     "commitAnalyses": [{"hash":"1234567890abcdef","message":"Add login","category":"FUNCTIONAL","importance":5,"explanation":"Key change"}],
                     "riskFlags": []
                   }],
-                  "teamIndicators": [],
+                  "teamIndicators": [{
+                    "type": "BALANCE",
+                    "severity": "INFO",
+                    "title": "Balanced contribution",
+                    "explanation": "No strong imbalance was found."
+                  }],
                   "conclusion": "The contribution is clearly visible.",
                   "methodology": "Gemini compared the diffs with the project goal."
                 }
@@ -63,5 +74,112 @@ class ContributionAnalysisServiceImplTest {
         assertThat(analysis.projectSummary()).isEqualTo("Team web project.");
         assertThat(analysis.contributors()).hasSize(1);
         assertThat(analysis.contributors().getFirst().contributionPercentage()).isEqualTo(100);
+        assertThat(analysis.contributors().getFirst().contributionLevel()).isEqualTo(ContributionLevel.HIGH);
+        assertThat(analysis.contributors().getFirst().commitAnalyses().getFirst().category())
+                .isEqualTo(CommitCategory.FUNCTIONAL);
+        assertThat(analysis.teamIndicators().getFirst().severity()).isEqualTo(TeamIndicatorSeverity.INFO);
+    }
+
+    @Test
+    void rejectsUnknownEnumValueAsAControlledGeminiError() {
+        String analysisJson = """
+                {
+                  "projectSummary": "Team web project.",
+                  "goalAlignment": "The changes align with the project goal.",
+                  "contributors": [{
+                    "name": "Ana",
+                    "email": "ana@example.com",
+                    "contributionPercentage": 100,
+                    "contributionLevel": "UNSUPPORTED",
+                    "summary": "Core functionality.",
+                    "mainWork": [],
+                    "categorySummary": [],
+                    "commitAnalyses": [],
+                    "riskFlags": []
+                  }],
+                  "teamIndicators": [],
+                  "conclusion": "Conclusion.",
+                  "methodology": "Methodology."
+                }
+                """;
+
+        var response = objectMapper.createObjectNode();
+        response.putArray("candidates")
+                .addObject()
+                .putObject("content")
+                .putArray("parts")
+                .addObject()
+                .put("text", analysisJson);
+
+        assertThatThrownBy(() -> service.parseResponse(response))
+                .isInstanceOf(GeminiException.class)
+                .hasMessageContaining("not a valid JSON report");
+    }
+
+    @Test
+    void rejectsContributionLevelThatDoesNotMatchPercentage() {
+        ContributorAnalysis contributor = new ContributorAnalysis(
+                "Ana",
+                "ana@example.com",
+                100,
+                ContributionLevel.LOW,
+                "Core contribution.",
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of()
+        );
+        ContributionAnalysis analysis = new ContributionAnalysis(
+                "Project summary",
+                "Goal alignment",
+                List.of(contributor),
+                List.of(),
+                "Conclusion",
+                "Methodology"
+        );
+        RepositoryData repository = new RepositoryData(
+                "https://github.com/team/project",
+                "project",
+                "main",
+                List.of()
+        );
+
+        assertThatThrownBy(() -> service.validateResponse(analysis, repository))
+                .isInstanceOf(GeminiException.class)
+                .hasMessageContaining("does not match its percentage");
+    }
+
+    @Test
+    void rejectsNullContributorAsAControlledGeminiError() {
+        String analysisJson = """
+                {
+                  "projectSummary": "Project summary",
+                  "goalAlignment": "Goal alignment",
+                  "contributors": [null],
+                  "teamIndicators": [],
+                  "conclusion": "Conclusion",
+                  "methodology": "Gemini methodology"
+                }
+                """;
+
+        var response = objectMapper.createObjectNode();
+        response.putArray("candidates")
+                .addObject()
+                .putObject("content")
+                .putArray("parts")
+                .addObject()
+                .put("text", analysisJson);
+
+        ContributionAnalysis analysis = service.parseResponse(response);
+        RepositoryData repository = new RepositoryData(
+                "https://github.com/team/project",
+                "project",
+                "main",
+                List.of()
+        );
+
+        assertThatThrownBy(() -> service.validateResponse(analysis, repository))
+                .isInstanceOf(GeminiException.class)
+                .hasMessageContaining("incomplete contributor");
     }
 }

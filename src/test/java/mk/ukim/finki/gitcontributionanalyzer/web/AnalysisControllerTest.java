@@ -1,8 +1,9 @@
 package mk.ukim.finki.gitcontributionanalyzer.web;
 import mk.ukim.finki.gitcontributionanalyzer.dto.*;
+import mk.ukim.finki.gitcontributionanalyzer.enums.*;
 import mk.ukim.finki.gitcontributionanalyzer.exception.ReportNotFoundException;
 import mk.ukim.finki.gitcontributionanalyzer.model.*;
-import mk.ukim.finki.gitcontributionanalyzer.service.impl.ReportServiceImpl;
+import mk.ukim.finki.gitcontributionanalyzer.service.ReportService;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +30,7 @@ class AnalysisControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-    private ReportServiceImpl reportService;
+    private ReportService reportService;
 
     @Test
     void showsAnalysisForm() throws Exception {
@@ -67,7 +68,11 @@ class AnalysisControllerTest {
                 .andExpect(view().name("report"))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Ana Developer")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("65%")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Final AI assessment")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("High")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Final contribution assessment")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Gemini AI")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("indicator-card info")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("delivery-note no-print sent")));
     }
 
     @Test
@@ -86,14 +91,14 @@ class AnalysisControllerTest {
                 "Ana Developer",
                 "ana@example.com",
                 65,
-                "High",
+                ContributionLevel.HIGH,
                 "She implemented the core functionality.",
                 List.of("Login", "User profile"),
-                List.of(new CategorySummary("FUNCTIONAL", 1, "New functionality")),
+                List.of(new CategorySummary(CommitCategory.FUNCTIONAL, 1, "New functionality")),
                 List.of(new CommitAnalysis(
                         "1234567890abcdef",
                         "Add login",
-                        "FUNCTIONAL",
+                        CommitCategory.FUNCTIONAL,
                         5,
                         "Key project change."
                 )),
@@ -103,14 +108,14 @@ class AnalysisControllerTest {
                 "Boris Tester",
                 "boris@example.com",
                 35,
-                "Medium",
+                ContributionLevel.MEDIUM,
                 "Added tests and fixes.",
                 List.of("Integration tests"),
-                List.of(new CategorySummary("TESTING", 1, "Test coverage")),
+                List.of(new CategorySummary(CommitCategory.TESTING, 1, "Test coverage")),
                 List.of(new CommitAnalysis(
                         "abcdef1234567890",
                         "Add tests",
-                        "TESTING",
+                        CommitCategory.TESTING,
                         4,
                         "Improves reliability."
                 )),
@@ -121,7 +126,12 @@ class AnalysisControllerTest {
                 "Team collaboration application.",
                 "The commits align with the project goal.",
                 List.of(ana, boris),
-                List.of(new TeamIndicator("BALANCE", "INFO", "Balanced contribution", "No critical imbalance.")),
+                List.of(new TeamIndicator(
+                        "BALANCE",
+                        TeamIndicatorSeverity.INFO,
+                        "Balanced contribution",
+                        "No critical imbalance."
+                )),
                 "The team achieved the main goal.",
                 "Gemini analyzed the commit messages, files, and diffs."
         );
@@ -133,13 +143,13 @@ class AnalysisControllerTest {
                 "main",
                 "Team collaboration and organization application.",
                 "mentor@example.com",
-                "Gemini AI",
+                AnalysisSource.GEMINI,
                 "gemini-3.6-flash",
                 "Gemini analyzed the Git history using the supplied project goal.",
                 2,
                 OffsetDateTime.now(),
                 analysis,
-                new EmailDelivery("SENT", "The report was sent.")
+                new EmailDelivery(EmailDeliveryStatus.SENT, "The report was sent.")
         );
     }
 }

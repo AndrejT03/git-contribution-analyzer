@@ -8,9 +8,11 @@
 <div style="max-width:760px;margin:0 auto;padding:30px 16px;">
   <div style="padding:30px;border-radius:18px;background:#4435bd;color:white;">
     <p style="margin:0 0 10px;font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;"
-       th:text="${report.analysisSource} + ' Report'">Contribution Analysis Report</p>
+       th:text="${report.analysisSource.displayName()} + ' Report'">Contribution Analysis Report</p>
     <h1 style="margin:0 0 14px;font-size:34px;" th:text="${report.repositoryName}">Project</h1>
     <p style="margin:0;line-height:1.6;color:#efedff;" th:text="${report.analysis.projectSummary}">Summary</p>
+    <p style="margin:14px 0 0;line-height:1.5;color:#efedff;"
+       th:text="'Engine: ' + ${report.analysisModel}">Analysis engine</p>
     <p style="margin:14px 0 0;line-height:1.5;color:#efedff;" th:text="${report.analysisNotice}">Analysis details</p>
   </div>
 

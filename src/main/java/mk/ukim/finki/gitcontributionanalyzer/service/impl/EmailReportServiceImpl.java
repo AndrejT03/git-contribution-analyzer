@@ -1,6 +1,7 @@
 package mk.ukim.finki.gitcontributionanalyzer.service.impl;
 import jakarta.mail.internet.MimeMessage;
 import mk.ukim.finki.gitcontributionanalyzer.config.AppSettings;
+import mk.ukim.finki.gitcontributionanalyzer.enums.EmailDeliveryStatus;
 import mk.ukim.finki.gitcontributionanalyzer.model.AnalysisReport;
 import mk.ukim.finki.gitcontributionanalyzer.model.EmailDelivery;
 import mk.ukim.finki.gitcontributionanalyzer.service.EmailReportService;
@@ -29,14 +30,14 @@ public class EmailReportServiceImpl implements EmailReportService {
     public EmailDelivery sendReport(AnalysisReport report) {
         if(!settings.mailEnabled()) {
             return new EmailDelivery(
-                    "DISABLED",
+                    EmailDeliveryStatus.DISABLED,
                     "The report is ready, but email delivery is disabled in .env."
             );
         }
 
         if(!hasMailConfiguration()) {
             return new EmailDelivery(
-                    "FAILED",
+                    EmailDeliveryStatus.FAILED,
                     "SMTP settings are missing from the .env file."
             );
         }
@@ -59,13 +60,13 @@ public class EmailReportServiceImpl implements EmailReportService {
 
             mailSender.send(message);
             return new EmailDelivery(
-                    "SENT",
+                    EmailDeliveryStatus.SENT,
                     "The report was sent to " + report.requestedEmail() + "."
             );
 
         } catch (MailException | jakarta.mail.MessagingException e) {
             return new EmailDelivery(
-                    "FAILED",
+                    EmailDeliveryStatus.FAILED,
                     "The report is ready, but the SMTP server could not deliver the email."
             );
         }

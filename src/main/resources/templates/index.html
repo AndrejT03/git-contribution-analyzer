@@ -18,7 +18,7 @@
 
     <div class="steps" aria-label="Analysis steps">
       <div><strong>1</strong><span>Download Git history</span></div>
-      <div><strong>2</strong><span>Analyze changes with Gemini</span></div>
+      <div><strong>2</strong><span>Analyze contribution</span></div>
       <div><strong>3</strong><span>Email report</span></div>
     </div>
   </section>
@@ -27,7 +27,7 @@
     <div class="form-heading">
       <p class="eyebrow">New analysis</p>
       <h2>Project details</h2>
-      <p>Public GitHub and GitLab repositories are currently supported.</p>
+      <p>Only public GitHub and GitLab repositories can be analyzed.</p>
     </div>
 
     <div class="error-message" th:if="${error}" th:text="${error}"></div>
@@ -45,7 +45,7 @@
         <label for="projectDescription">Project goal or short description</label>
         <textarea id="projectDescription" th:field="*{projectDescription}" rows="6"
                   placeholder="Explain what the project should achieve..." required></textarea>
-        <small class="hint">The description helps Gemini determine the importance of each change.</small>
+        <small class="hint">The description helps Gemini and the local rules evaluate each change.</small>
         <small class="error" th:if="${#fields.hasErrors('projectDescription')}"
                th:errors="*{projectDescription}"></small>
       </div>
@@ -53,7 +53,7 @@
       <div class="field">
         <label for="email">Report email</label>
         <input id="email" type="email" th:field="*{email}"
-               placeholder="ime@example.com" required>
+               placeholder="name@example.com" required>
         <small class="error" th:if="${#fields.hasErrors('email')}"
                th:errors="*{email}"></small>
       </div>
@@ -67,7 +67,7 @@
 <div id="loadingOverlay" class="loading-overlay" hidden role="status" aria-live="polite">
   <div class="loading-card">
     <span class="spinner" aria-hidden="true"></span>
-    <h2>Gemini is analyzing the history</h2>
+    <h2>Contribution analysis in progress</h2>
     <p>The repository is being downloaded and its commits are being processed. This may take several minutes.</p>
   </div>
 </div>
