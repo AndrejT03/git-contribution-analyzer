@@ -116,6 +116,23 @@ class ReportServiceImplTest {
         verify(reportRepository).save(report);
     }
 
+    @Test
+    void keepsTheOnScreenReportWhenEmailDeliveryFailsUnexpectedly() {
+        ContributionAnalysis result = analysis("Gemini methodology");
+        when(settings.geminiModel()).thenReturn("gemini-test-model");
+        when(geminiAnalysisService.analyze(any(), any())).thenReturn(result);
+        when(emailReportService.sendReport(any()))
+                .thenThrow(new IllegalStateException("Email template failed"));
+
+        var report = reportService.createReport(request);
+
+        assertThat(report.analysis()).isSameAs(result);
+        assertThat(report.emailDelivery().status()).isEqualTo(EmailDeliveryStatus.FAILED);
+        assertThat(report.emailDelivery().message()).contains("available on screen");
+        verify(reportRepository, times(2)).save(any());
+        verify(reportRepository).save(report);
+    }
+
     private ContributionAnalysis analysis(String methodology) {
         return new ContributionAnalysis(
                 "Project summary",

@@ -85,7 +85,12 @@ public class GitRepositoryServiceImpl implements GitRepositoryService {
     }
 
     private void cloneRepository(String url, Path destination) {
-        runCommand(List.of(
+        runCommand(cloneCommand(url, destination), null,
+                "The repository could not be cloned. Check that it is public and available.");
+    }
+
+    public List<String> cloneCommand(String url, Path destination) {
+        return List.of(
                 "git",
                 "-c", "http.lowSpeedLimit=1000",
                 "-c", "http.lowSpeedTime=30",
@@ -94,7 +99,7 @@ public class GitRepositoryServiceImpl implements GitRepositoryService {
                 "--no-checkout",
                 url,
                 destination.toString()
-        ), null, "The repository could not be cloned. Check that it is public and available.");
+        );
     }
 
     private String readDefaultBranch(Path repositoryDirectory) {

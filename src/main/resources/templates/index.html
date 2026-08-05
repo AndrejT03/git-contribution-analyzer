@@ -9,7 +9,7 @@
 <body>
 <main class="page-shell">
   <section class="intro">
-    <span class="badge">Diploma Project</span>
+    <span class="badge">Diplomska</span>
     <h1>Who really contributed to the project?</h1>
     <p class="lead">
       Git Contribution AI reads the commit history and prepares
@@ -19,7 +19,8 @@
     <div class="steps" aria-label="Analysis steps">
       <div><strong>1</strong><span>Download Git history</span></div>
       <div><strong>2</strong><span>Analyze contribution</span></div>
-      <div><strong>3</strong><span>Email report</span></div>
+      <div><strong>3</strong><span>Show the complete report on screen</span></div>
+      <div><strong>4</strong><span>Send a copy by email</span></div>
     </div>
   </section>
 
@@ -51,9 +52,10 @@
       </div>
 
       <div class="field">
-        <label for="email">Report email</label>
+        <label for="email">Email copy of the report</label>
         <input id="email" type="email" th:field="*{email}"
                placeholder="name@example.com" required>
+        <small class="hint">The complete result will also open in this browser.</small>
         <small class="error" th:if="${#fields.hasErrors('email')}"
                th:errors="*{email}"></small>
       </div>

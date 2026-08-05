@@ -3,6 +3,7 @@ import mk.ukim.finki.gitcontributionanalyzer.config.AppSettings;
 import mk.ukim.finki.gitcontributionanalyzer.dto.AnalysisRequest;
 import mk.ukim.finki.gitcontributionanalyzer.dto.ContributionAnalysis;
 import mk.ukim.finki.gitcontributionanalyzer.enums.AnalysisSource;
+import mk.ukim.finki.gitcontributionanalyzer.enums.EmailDeliveryStatus;
 import mk.ukim.finki.gitcontributionanalyzer.exception.*;
 import mk.ukim.finki.gitcontributionanalyzer.model.*;
 import mk.ukim.finki.gitcontributionanalyzer.repository.AnalysisReportRepository;
@@ -77,7 +78,19 @@ public class ReportServiceImpl implements ReportService {
                 EmailDelivery.pending()
         );
 
-        EmailDelivery delivery = emailReportService.sendReport(report);
+        reportRepository.save(report);
+
+        EmailDelivery delivery;
+        try {
+            delivery = emailReportService.sendReport(report);
+        } catch (RuntimeException exception) {
+            LOGGER.warn("The report was generated, but email delivery failed unexpectedly.", exception);
+            delivery = new EmailDelivery(
+                    EmailDeliveryStatus.FAILED,
+                    "The report is available on screen, but email delivery failed unexpectedly."
+            );
+        }
+
         report = report.withEmailDelivery(delivery);
         reportRepository.save(report);
         return report;

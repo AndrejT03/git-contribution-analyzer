@@ -59,6 +59,20 @@ class AnalysisControllerTest {
     }
 
     @Test
+    void redirectsACompletedAnalysisToTheOnScreenReport() throws Exception {
+        UUID id = UUID.randomUUID();
+        when(reportService.createReport(any())).thenReturn(sampleReport(id));
+
+        mockMvc.perform(post("/analyze")
+                        .param("repositoryUrl", "https://github.com/team/project")
+                        .param("projectDescription", "Team collaboration and organization application.")
+                        .param("email", "mentor@example.com"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/reports/" + id))
+                .andExpect(flash().attribute("newReport", true));
+    }
+
+    @Test
     void rendersCompleteReportPage() throws Exception {
         UUID id = UUID.randomUUID();
         when(reportService.getReport(id)).thenReturn(sampleReport(id));
@@ -84,6 +98,13 @@ class AnalysisControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(view().name("error-page"))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Report not found.")));
+    }
+
+    @Test
+    void returnsNotFoundWithoutA500PageForMissingBrowserIcons() throws Exception {
+        mockMvc.perform(get("/favicon.ico"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().string(""));
     }
 
     private AnalysisReport sampleReport(UUID id) {

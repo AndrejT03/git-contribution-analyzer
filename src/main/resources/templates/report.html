@@ -37,6 +37,7 @@
 
     <div class="new-report-note no-print" th:if="${newReport}">
         <strong>Analysis completed successfully.</strong>
+        <span>The complete result is shown below.</span>
         <span th:text="${report.emailDelivery.message}">Email status.</span>
     </div>
 
