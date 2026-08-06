@@ -1,6 +1,7 @@
 package mk.ukim.finki.gitcontributionanalyzer.service.impl;
 import mk.ukim.finki.gitcontributionanalyzer.config.AppSettings;
 import mk.ukim.finki.gitcontributionanalyzer.enums.ContributionLevel;
+import mk.ukim.finki.gitcontributionanalyzer.enums.GeminiFailureReason;
 import mk.ukim.finki.gitcontributionanalyzer.exception.GeminiException;
 import mk.ukim.finki.gitcontributionanalyzer.dto.CommitAnalysis;
 import mk.ukim.finki.gitcontributionanalyzer.dto.ContributorAnalysis;
@@ -10,14 +11,20 @@ import mk.ukim.finki.gitcontributionanalyzer.service.GeminiAnalysisService;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
+
+import java.net.SocketTimeoutException;
 import java.net.http.HttpClient;
+import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.TimeoutException;
 
 @Service
 public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
@@ -52,7 +59,7 @@ public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
 
     @Override
     public ContributionAnalysis analyze(String projectDescription, RepositoryData repositoryData) {
-        requireApiKey();
+        requireConfiguration();
         String Prompt = promptBuilder.build(projectDescription, repositoryData);
 
         Map<String, Object> request = Map.of(
@@ -80,20 +87,13 @@ public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
             validateResponse(analysis, repositoryData);
             return analysis;
         } catch (RestClientException e) {
-            throw new GeminiException("Gemini could not complete the analysis. Check the API key, model, and internet connection.", e);
-        }
-    }
-
-    private void requireApiKey() {
-        String apiKey = settings.geminiApiKey();
-        if (apiKey.isBlank() || "your_gemini_api_key".equals(apiKey)) {
-            throw new GeminiException("GEMINI_API_KEY is missing from the .env file.");
+            throw mapRestClientFailure(e);
         }
     }
 
     public ContributionAnalysis parseResponse(JsonNode response) {
         if (response == null) {
-            throw new GeminiException("Gemini returned an empty response.");
+            throw new GeminiException(GeminiFailureReason.EMPTY_RESPONSE);
         }
 
         String json = response.path("candidates")
@@ -105,25 +105,46 @@ public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
                 .asString("");
 
         if (json.isBlank()) {
-            String reason = response.path("promptFeedback").path("blockReason").asString("");
-            throw new GeminiException(reason.isBlank()
-                    ? "Gemini did not return an analysis."
-                    : "Gemini rejected the request: " + reason);
+            String promptBlockReason = response.path("promptFeedback")
+                    .path("blockReason")
+                    .asString("");
+            String candidateFinishReason = response.path("candidates")
+                    .path(0)
+                    .path("finishReason")
+                    .asString("");
+            boolean blocked = !promptBlockReason.isBlank()
+                    || "SAFETY".equals(candidateFinishReason)
+                    || "BLOCKLIST".equals(candidateFinishReason)
+                    || "PROHIBITED_CONTENT".equals(candidateFinishReason)
+                    || "SPII".equals(candidateFinishReason);
+            throw new GeminiException(blocked
+                    ? GeminiFailureReason.BLOCKED_RESPONSE
+                    : GeminiFailureReason.EMPTY_RESPONSE);
         }
 
         try {
             return objectMapper.readValue(removeMarkdownFence(json), ContributionAnalysis.class);
         } catch (JacksonException exception) {
-            throw new GeminiException("Gemini returned a response that is not a valid JSON report.", exception);
+            throw new GeminiException(GeminiFailureReason.INVALID_RESPONSE, exception);
+        }
+    }
+
+    private void requireConfiguration() {
+        String apiKey = settings.geminiApiKey();
+        if (apiKey.isBlank() || "your_gemini_api_key".equals(apiKey)) {
+            throw new GeminiException(GeminiFailureReason.MISSING_API_KEY);
+        }
+        if (settings.geminiModel().isBlank()) {
+            throw new GeminiException(GeminiFailureReason.MISSING_MODEL);
         }
     }
 
     public void validateResponse(ContributionAnalysis analysis, RepositoryData repositoryData) {
         if (analysis == null || analysis.contributors() == null || analysis.contributors().isEmpty()) {
-            throw new GeminiException("The Gemini response contains no contributor analyses.");
+            throw new GeminiException(GeminiFailureReason.INVALID_RESPONSE);
         }
         if (analysis.contributors().stream().anyMatch(Objects::isNull)) {
-            throw new GeminiException("Gemini returned incomplete contributor data.");
+            throw new GeminiException(GeminiFailureReason.INVALID_RESPONSE);
         }
         if (isBlank(analysis.projectSummary())
                 || isBlank(analysis.goalAlignment())
@@ -132,14 +153,14 @@ public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
                 || analysis.teamIndicators() == null
                 || analysis.teamIndicators().stream().anyMatch(indicator -> indicator == null
                 || indicator.severity() == null)) {
-            throw new GeminiException("Gemini returned an incomplete report.");
+            throw new GeminiException(GeminiFailureReason.INVALID_RESPONSE);
         }
 
         int percentageSum = analysis.contributors().stream()
                 .mapToInt(ContributorAnalysis::contributionPercentage)
                 .sum();
         if (percentageSum != 100) {
-            throw new GeminiException("Gemini percentages do not add up to 100. Try again.");
+            throw new GeminiException(GeminiFailureReason.INVALID_RESPONSE);
         }
 
         Set<String> expectedHashes = new HashSet<>();
@@ -157,23 +178,23 @@ public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
                     || contributor.categorySummary().stream().anyMatch(summary -> summary == null
                     || summary.category() == null)
                     || contributor.riskFlags() == null) {
-                throw new GeminiException("Gemini returned incomplete contributor data.");
+                throw new GeminiException(GeminiFailureReason.INVALID_RESPONSE);
             }
             if (contributor.contributionPercentage() < 0 || contributor.contributionPercentage() > 100) {
-                throw new GeminiException("Gemini returned an invalid contribution percentage.");
+                throw new GeminiException(GeminiFailureReason.INVALID_RESPONSE);
             }
             ContributionLevel expectedLevel = ContributionLevel.fromPercentage(
                     contributor.contributionPercentage()
             );
             if (contributor.contributionLevel() != expectedLevel) {
-                throw new GeminiException("Gemini returned a contribution level that does not match its percentage.");
+                throw new GeminiException(GeminiFailureReason.CONTRIBUTION_LEVEL_MISMATCH);
             }
             if (contributor.commitAnalyses() == null) {
-                throw new GeminiException("Gemini did not return commit analyses for every contributor.");
+                throw new GeminiException(GeminiFailureReason.INVALID_RESPONSE);
             }
             for (CommitAnalysis commit : contributor.commitAnalyses()) {
                 if (commit == null) {
-                    throw new GeminiException("Gemini returned an incomplete commit analysis.");
+                    throw new GeminiException(GeminiFailureReason.INVALID_RESPONSE);
                 }
                 analyzedCommitCount++;
                 if (isBlank(commit.hash())
@@ -183,17 +204,59 @@ public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
                         || isBlank(commit.explanation())
                         || commit.importance() < 1
                         || commit.importance() > 5) {
-                    throw new GeminiException("Gemini returned an incomplete commit analysis.");
+                    throw new GeminiException(GeminiFailureReason.INVALID_RESPONSE);
                 }
                 analyzedHashes.add(commit.hash());
             }
         }
 
         if (!analyzedHashes.equals(expectedHashes) || analyzedCommitCount != expectedHashes.size()) {
-            throw new GeminiException("Gemini did not analyze every commit exactly once. Try again.");
+            throw new GeminiException(GeminiFailureReason.INVALID_RESPONSE);
         }
     }
 
+    GeminiException mapRestClientFailure(RestClientException exception) {
+        if (exception instanceof RestClientResponseException responseException) {
+            int status = responseException.getStatusCode().value();
+            return new GeminiException(mapHttpFailure(status), exception);
+        }
+        if (exception instanceof ResourceAccessException) {
+            GeminiFailureReason reason = hasTimeoutCause(exception)
+                    ? GeminiFailureReason.TIMEOUT
+                    : GeminiFailureReason.NETWORK_ERROR;
+            return new GeminiException(reason, exception);
+        }
+        return new GeminiException(GeminiFailureReason.SERVICE_UNAVAILABLE, exception);
+    }
+
+    private GeminiFailureReason mapHttpFailure(int status) {
+        return switch (status) {
+            case 400 -> GeminiFailureReason.REQUEST_REJECTED;
+            case 401, 403 -> GeminiFailureReason.CREDENTIALS_REJECTED;
+            case 404 -> GeminiFailureReason.MODEL_UNAVAILABLE;
+            case 429 -> GeminiFailureReason.RATE_LIMITED;
+            default -> status >= 500 && status <= 599
+                    ? GeminiFailureReason.SERVICE_UNAVAILABLE
+                    : GeminiFailureReason.REQUEST_REJECTED;
+        };
+    }
+
+    private boolean hasTimeoutCause(Throwable exception) {
+        Throwable current = exception;
+        while (current != null) {
+            if (current instanceof HttpTimeoutException
+                    || current instanceof SocketTimeoutException
+                    || current instanceof TimeoutException) {
+                return true;
+            }
+            Throwable cause = current.getCause();
+            if (cause == current) {
+                return false;
+            }
+            current = cause;
+        }
+        return false;
+    }
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();

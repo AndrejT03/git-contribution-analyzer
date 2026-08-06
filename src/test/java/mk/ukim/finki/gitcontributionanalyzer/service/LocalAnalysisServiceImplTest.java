@@ -9,6 +9,7 @@ import mk.ukim.finki.gitcontributionanalyzer.service.impl.LocalAnalysisServiceIm
 import mk.ukim.finki.gitcontributionanalyzer.service.impl.LocalCommitClassifier;
 import org.junit.jupiter.api.Test;
 import java.time.OffsetDateTime;
+import java.util.Comparator;
 import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -82,6 +83,30 @@ class LocalAnalysisServiceImplTest {
         assertThat(result.contributors())
                 .extracting(contributor -> contributor.contributionPercentage())
                 .containsExactly(42, 37, 21);
+    }
+
+    @Test
+    void ranksLocalContributorsEvenWhenTheSmallestContributorAppearsFirst() {
+        RepositoryData repository = new RepositoryData(
+                "https://github.com/team/project",
+                "project",
+                "main",
+                List.of(
+                        commit("small-1", "Small", "small@example.com", "Format whitespace",
+                                new ChangedFile("src/App.java", 1, 0)),
+                        commit("large-1", "Large", "large@example.com", "Add planning feature",
+                                new ChangedFile("src/PlanningService.java", 500, 20))
+                )
+        );
+
+        ContributionAnalysis result = service.analyze("Planning feature", repository);
+
+        assertThat(result.contributors())
+                .extracting(contributor -> contributor.name())
+                .containsExactly("Large", "Small");
+        assertThat(result.contributors())
+                .extracting(contributor -> contributor.contributionPercentage())
+                .isSortedAccordingTo(Comparator.reverseOrder());
     }
 
     @Test

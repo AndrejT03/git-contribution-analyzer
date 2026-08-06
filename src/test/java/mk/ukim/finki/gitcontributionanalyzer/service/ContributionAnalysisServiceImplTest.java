@@ -39,17 +39,30 @@ class ContributionAnalysisServiceImplTest {
                 {
                   "projectSummary": "Team web project.",
                   "goalAlignment": "The changes align with the project goal.",
-                  "contributors": [{
-                    "name": "Ana",
-                    "email": "ana@example.com",
-                    "contributionPercentage": 100,
-                    "contributionLevel": "HIGH",
-                    "summary": "She implemented the core functionality.",
-                    "mainWork": ["User login"],
-                    "categorySummary": [{"category":"FUNCTIONAL","commitCount":1,"explanation":"Core functionality"}],
-                    "commitAnalyses": [{"hash":"1234567890abcdef","message":"Add login","category":"FUNCTIONAL","importance":5,"explanation":"Key change"}],
-                    "riskFlags": []
-                  }],
+                  "contributors": [
+                    {
+                      "name": "Boris",
+                      "email": "boris@example.com",
+                      "contributionPercentage": 20,
+                      "contributionLevel": "MEDIUM",
+                      "summary": "He documented the flow.",
+                      "mainWork": ["Documentation"],
+                      "categorySummary": [{"category":"DOCUMENTATION","commitCount":1,"explanation":"Project guide"}],
+                      "commitAnalyses": [{"hash":"abcdef1234567890","message":"Document login","category":"DOCUMENTATION","importance":2,"explanation":"Supporting change"}],
+                      "riskFlags": []
+                    },
+                    {
+                      "name": "Ana",
+                      "email": "ana@example.com",
+                      "contributionPercentage": 80,
+                      "contributionLevel": "HIGH",
+                      "summary": "She implemented the core functionality.",
+                      "mainWork": ["User login"],
+                      "categorySummary": [{"category":"FUNCTIONAL","commitCount":1,"explanation":"Core functionality"}],
+                      "commitAnalyses": [{"hash":"1234567890abcdef","message":"Add login","category":"FUNCTIONAL","importance":5,"explanation":"Key change"}],
+                      "riskFlags": []
+                    }
+                  ],
                   "teamIndicators": [{
                     "type": "BALANCE",
                     "severity": "INFO",
@@ -72,8 +85,12 @@ class ContributionAnalysisServiceImplTest {
         ContributionAnalysis analysis = service.parseResponse(response);
 
         assertThat(analysis.projectSummary()).isEqualTo("Team web project.");
-        assertThat(analysis.contributors()).hasSize(1);
-        assertThat(analysis.contributors().getFirst().contributionPercentage()).isEqualTo(100);
+        assertThat(analysis.contributors())
+                .extracting(ContributorAnalysis::name, ContributorAnalysis::contributionPercentage)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("Ana", 80),
+                        org.assertj.core.groups.Tuple.tuple("Boris", 20)
+                );
         assertThat(analysis.contributors().getFirst().contributionLevel()).isEqualTo(ContributionLevel.HIGH);
         assertThat(analysis.contributors().getFirst().commitAnalyses().getFirst().category())
                 .isEqualTo(CommitCategory.FUNCTIONAL);
@@ -113,7 +130,8 @@ class ContributionAnalysisServiceImplTest {
 
         assertThatThrownBy(() -> service.parseResponse(response))
                 .isInstanceOf(GeminiException.class)
-                .hasMessageContaining("not a valid JSON report");
+                .satisfies(exception -> assertThat(((GeminiException) exception).reason())
+                        .isEqualTo(GeminiFailureReason.INVALID_RESPONSE));
     }
 
     @Test
@@ -180,6 +198,7 @@ class ContributionAnalysisServiceImplTest {
 
         assertThatThrownBy(() -> service.validateResponse(analysis, repository))
                 .isInstanceOf(GeminiException.class)
-                .hasMessageContaining("incomplete contributor");
+                .satisfies(exception -> assertThat(((GeminiException) exception).reason())
+                        .isEqualTo(GeminiFailureReason.INVALID_RESPONSE));
     }
 }

@@ -55,11 +55,15 @@ public class ReportServiceImpl implements ReportService {
             analysisModel = settings.geminiModel();
             analysisNotice = "Gemini analyzed the Git history using the supplied project goal.";
         } catch (GeminiException exception) {
-            LOGGER.warn("Gemini analysis failed; using the local fallback. Reason: {}", exception.getMessage());
+            LOGGER.warn(
+                    "Gemini analysis failed; using the local fallback. Category: {}, reason: {}",
+                    exception.category(),
+                    exception.reason()
+            );
             analysis = localAnalysisService.analyze(request.getProjectDescription(), repository);
             analysisSource = AnalysisSource.LOCAL_FALLBACK;
             analysisModel = "Built-in heuristic rules";
-            analysisNotice = "Gemini could not produce a usable analysis, so this report was generated with the built-in local heuristic analyzer.";
+            analysisNotice = exception.userMessage() + " This report was generated with the built-in local heuristic analyzer.";
         }
 
         AnalysisReport report = new AnalysisReport(

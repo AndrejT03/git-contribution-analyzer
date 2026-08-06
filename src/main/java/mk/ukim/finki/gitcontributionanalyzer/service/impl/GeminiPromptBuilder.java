@@ -97,7 +97,7 @@ public class GeminiPromptBuilder {
                     repositoryJson
             );
         } catch (JacksonException exception) {
-            throw new GeminiException("Git data could not be prepared for Gemini.", exception);
+            throw new GeminiException(GeminiFailureReason.REQUEST_PREPARATION_FAILED, exception);
         }
     }
 

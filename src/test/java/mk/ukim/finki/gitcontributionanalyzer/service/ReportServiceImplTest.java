@@ -4,6 +4,7 @@ import mk.ukim.finki.gitcontributionanalyzer.dto.AnalysisRequest;
 import mk.ukim.finki.gitcontributionanalyzer.dto.ContributionAnalysis;
 import mk.ukim.finki.gitcontributionanalyzer.enums.AnalysisSource;
 import mk.ukim.finki.gitcontributionanalyzer.enums.EmailDeliveryStatus;
+import mk.ukim.finki.gitcontributionanalyzer.enums.GeminiFailureReason;
 import mk.ukim.finki.gitcontributionanalyzer.exception.GeminiException;
 import mk.ukim.finki.gitcontributionanalyzer.model.ChangedFile;
 import mk.ukim.finki.gitcontributionanalyzer.model.EmailDelivery;
@@ -101,9 +102,8 @@ class ReportServiceImplTest {
     @Test
     void usesLocalAnalysisWhenGeminiIsUnavailable() {
         ContributionAnalysis localResult = analysis("Local analysis methodology");
-
         when(geminiAnalysisService.analyze(any(), any()))
-                .thenThrow(new GeminiException("API unavailable"));
+                .thenThrow(new GeminiException(GeminiFailureReason.RATE_LIMITED));
         when(localAnalysisService.analyze(any(), any())).thenReturn(localResult);
 
         var report = reportService.createReport(request);
@@ -111,7 +111,10 @@ class ReportServiceImplTest {
         assertThat(report.analysis()).isSameAs(localResult);
         assertThat(report.analysisSource()).isEqualTo(AnalysisSource.LOCAL_FALLBACK);
         assertThat(report.analysisModel()).isEqualTo("Built-in heuristic rules");
-        assertThat(report.analysisNotice()).contains("could not produce a usable analysis");
+        assertThat(report.analysisNotice())
+                .contains("request limit or quota")
+                .contains("built-in local heuristic analyzer")
+                .doesNotContain("API unavailable");
         verify(localAnalysisService).analyze(request.getProjectDescription(), repository);
         verify(reportRepository).save(report);
     }
