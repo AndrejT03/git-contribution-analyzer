@@ -3,6 +3,7 @@ import mk.ukim.finki.gitcontributionanalyzer.config.AppSettings;
 import mk.ukim.finki.gitcontributionanalyzer.dto.AnalysisRequest;
 import mk.ukim.finki.gitcontributionanalyzer.dto.ContributionAnalysis;
 import mk.ukim.finki.gitcontributionanalyzer.enums.AnalysisSource;
+import mk.ukim.finki.gitcontributionanalyzer.enums.AnalysisStage;
 import mk.ukim.finki.gitcontributionanalyzer.enums.EmailDeliveryStatus;
 import mk.ukim.finki.gitcontributionanalyzer.enums.GeminiFailureReason;
 import mk.ukim.finki.gitcontributionanalyzer.exception.GeminiException;
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -89,12 +91,20 @@ class ReportServiceImplTest {
         ContributionAnalysis geminiResult = analysis("Gemini methodology");
         when(settings.geminiModel()).thenReturn("gemini-test-model");
         when(geminiAnalysisService.analyze(any(), any())).thenReturn(geminiResult);
+        List<AnalysisStage> stages = new ArrayList<>();
 
-        var report = reportService.createReport(request);
+        var report = reportService.createReport(request, stages::add);
 
         assertThat(report.analysis()).isSameAs(geminiResult);
         assertThat(report.analysisSource()).isEqualTo(AnalysisSource.GEMINI);
         assertThat(report.analysisModel()).isEqualTo("gemini-test-model");
+        assertThat(stages).containsExactly(
+                AnalysisStage.READING_REPOSITORY,
+                AnalysisStage.ANALYZING_WITH_GEMINI,
+                AnalysisStage.PREPARING_REPORT,
+                AnalysisStage.SAVING_REPORT,
+                AnalysisStage.DELIVERING_EMAIL
+        );
         verify(localAnalysisService, never()).analyze(any(), any());
         verify(reportRepository).save(report);
     }
@@ -105,8 +115,9 @@ class ReportServiceImplTest {
         when(geminiAnalysisService.analyze(any(), any()))
                 .thenThrow(new GeminiException(GeminiFailureReason.RATE_LIMITED));
         when(localAnalysisService.analyze(any(), any())).thenReturn(localResult);
+        List<AnalysisStage> stages = new ArrayList<>();
 
-        var report = reportService.createReport(request);
+        var report = reportService.createReport(request, stages::add);
 
         assertThat(report.analysis()).isSameAs(localResult);
         assertThat(report.analysisSource()).isEqualTo(AnalysisSource.LOCAL_FALLBACK);
@@ -115,6 +126,14 @@ class ReportServiceImplTest {
                 .contains("request limit or quota")
                 .contains("built-in local heuristic analyzer")
                 .doesNotContain("API unavailable");
+        assertThat(stages).containsExactly(
+                AnalysisStage.READING_REPOSITORY,
+                AnalysisStage.ANALYZING_WITH_GEMINI,
+                AnalysisStage.LOCAL_FALLBACK,
+                AnalysisStage.PREPARING_REPORT,
+                AnalysisStage.SAVING_REPORT,
+                AnalysisStage.DELIVERING_EMAIL
+        );
         verify(localAnalysisService).analyze(request.getProjectDescription(), repository);
         verify(reportRepository).save(report);
     }
@@ -134,6 +153,18 @@ class ReportServiceImplTest {
         assertThat(report.emailDelivery().message()).contains("available on screen");
         verify(reportRepository, times(2)).save(any());
         verify(reportRepository).save(report);
+    }
+
+    @Test
+    void supportsExistingSynchronousCallersWithoutAProgressListener() {
+        ContributionAnalysis result = analysis("Gemini methodology");
+        when(settings.geminiModel()).thenReturn("gemini-test-model");
+        when(geminiAnalysisService.analyze(any(), any())).thenReturn(result);
+
+        var report = reportService.createReport(request);
+
+        assertThat(report.analysis()).isSameAs(result);
+        assertThat(report.emailDelivery().status()).isEqualTo(EmailDeliveryStatus.DISABLED);
     }
 
     private ContributionAnalysis analysis(String methodology) {

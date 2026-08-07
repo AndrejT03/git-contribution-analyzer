@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Analysis progress · Git Contribution AI</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body class="progress-body">
+<main class="progress-shell">
+    <section class="analysis-progress-card"
+             data-analysis-progress
+             th:attr="data-status-url=@{/api/analyses/{id}(id=${job.id})}">
+        <span class="badge">Live analysis</span>
+        <p class="progress-kicker">You can keep this page open</p>
+        <h1>Contribution analysis in progress</h1>
+        <p class="lead">The indicator advances when the server reaches a real analysis stage.</p>
+
+        <div class="progress-summary">
+            <strong id="progressPercent" th:text="${job.progress} + '%'">0%</strong>
+            <span id="progressStage" th:text="${job.stage.label}">Queued</span>
+        </div>
+
+        <div id="analysisProgressBar"
+             class="analysis-progress-track"
+             role="progressbar"
+             aria-label="Analysis completion"
+             aria-valuemin="0"
+             aria-valuemax="100"
+             th:attr="aria-valuenow=${job.progress}"
+             aria-describedby="progressMessage">
+            <span id="progressFill" th:style="'width: ' + ${job.progress} + '%'"> </span>
+        </div>
+
+        <p id="progressMessage" class="progress-message" aria-live="polite"
+           th:text="${jobStatus.message}">Your analysis is queued.</p>
+
+        <div id="progressFailure" class="progress-failure"
+             th:hidden="${job.status.name() != 'FAILED'}">
+            <strong>The analysis stopped before a report could be created.</strong>
+            <p>Review the message above, then try the request again.</p>
+            <div class="progress-actions">
+                <a class="primary-link" th:href="@{/}">Start another analysis</a>
+                <button class="secondary-action" type="button" onclick="window.location.reload()">Check again</button>
+            </div>
+        </div>
+
+        <noscript>
+            <div class="progress-noscript">
+                JavaScript is required for live updates. Refresh this page to check the latest status.
+            </div>
+        </noscript>
+    </section>
+</main>
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>

@@ -4,12 +4,22 @@ import mk.ukim.finki.gitcontributionanalyzer.dto.ContributionAnalysis;
 import mk.ukim.finki.gitcontributionanalyzer.dto.ContributorAnalysis;
 import mk.ukim.finki.gitcontributionanalyzer.enums.*;
 import mk.ukim.finki.gitcontributionanalyzer.exception.GeminiException;
+import mk.ukim.finki.gitcontributionanalyzer.model.GitCommit;
 import mk.ukim.finki.gitcontributionanalyzer.model.RepositoryData;
 import mk.ukim.finki.gitcontributionanalyzer.service.impl.GeminiAnalysisServiceImpl;
 import mk.ukim.finki.gitcontributionanalyzer.service.impl.GeminiPromptBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestClientResponseException;
 import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
+import java.net.http.HttpTimeoutException;
+import java.time.OffsetDateTime;
 import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -164,7 +174,8 @@ class ContributionAnalysisServiceImplTest {
 
         assertThatThrownBy(() -> service.validateResponse(analysis, repository))
                 .isInstanceOf(GeminiException.class)
-                .hasMessageContaining("does not match its percentage");
+                .satisfies(exception -> assertThat(((GeminiException) exception).reason())
+                        .isEqualTo(GeminiFailureReason.INVALID_RESPONSE));
     }
 
     @Test
@@ -200,5 +211,173 @@ class ContributionAnalysisServiceImplTest {
                 .isInstanceOf(GeminiException.class)
                 .satisfies(exception -> assertThat(((GeminiException) exception).reason())
                         .isEqualTo(GeminiFailureReason.INVALID_RESPONSE));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "null-contribution-level",
+            "blank-main-work",
+            "null-risk-flag",
+            "null-category-summary-entry",
+            "null-summary-category",
+            "unknown-summary-category",
+            "null-commit-category",
+            "unknown-commit-category",
+            "null-indicator-severity",
+            "unknown-indicator-severity"
+    })
+    void rejectsMalformedNestedFieldsAsAControlledGeminiError(String invalidField) throws Exception {
+        ObjectNode analysisJson = (ObjectNode) objectMapper.readTree(validNestedAnalysisJson());
+        ObjectNode contributor = (ObjectNode) analysisJson.path("contributors").path(0);
+        ObjectNode categorySummary = (ObjectNode) contributor.path("categorySummary").path(0);
+        ObjectNode commitAnalysis = (ObjectNode) contributor.path("commitAnalyses").path(0);
+        ObjectNode teamIndicator = (ObjectNode) analysisJson.path("teamIndicators").path(0);
+
+        switch (invalidField) {
+            case "null-contribution-level" -> contributor.putNull("contributionLevel");
+            case "blank-main-work" -> replaceWithInvalidText(contributor, "mainWork", "");
+            case "null-risk-flag" -> replaceWithInvalidText(contributor, "riskFlags", null);
+            case "null-category-summary-entry" -> {
+                ArrayNode summaries = (ArrayNode) contributor.path("categorySummary");
+                summaries.removeAll();
+                summaries.addNull();
+            }
+            case "null-summary-category" -> categorySummary.putNull("category");
+            case "unknown-summary-category" -> categorySummary.put("category", "UNKNOWN");
+            case "null-commit-category" -> commitAnalysis.putNull("category");
+            case "unknown-commit-category" -> commitAnalysis.put("category", "UNKNOWN");
+            case "null-indicator-severity" -> teamIndicator.putNull("severity");
+            case "unknown-indicator-severity" -> teamIndicator.put("severity", "LOUD");
+            default -> throw new IllegalArgumentException("Unknown test field: " + invalidField);
+        }
+
+        assertThatThrownBy(() -> {
+            ContributionAnalysis analysis = parseAnalysis(analysisJson.toString());
+            service.validateResponse(analysis, repositoryWithSingleCommit());
+        })
+                .isInstanceOf(GeminiException.class)
+                .satisfies(exception -> assertThat(((GeminiException) exception).reason())
+                        .isEqualTo(GeminiFailureReason.INVALID_RESPONSE));
+    }
+
+    @Test
+    void identifiesBlockedCandidateWithoutExposingProviderDetails() {
+        var response = objectMapper.createObjectNode();
+        response.putArray("candidates")
+                .addObject()
+                .put("finishReason", "SAFETY");
+
+        assertThatThrownBy(() -> service.parseResponse(response))
+                .isInstanceOf(GeminiException.class)
+                .satisfies(exception -> {
+                    GeminiException geminiException = (GeminiException) exception;
+                    assertThat(geminiException.reason()).isEqualTo(GeminiFailureReason.BLOCKED_RESPONSE);
+                    assertThat(geminiException.getMessage()).doesNotContain("SAFETY");
+                });
+    }
+
+    @Test
+    void mapsProviderStatusesToSafeFailureReasons() {
+        assertThat(mapStatus(HttpStatus.UNAUTHORIZED)).isEqualTo(GeminiFailureReason.CREDENTIALS_REJECTED);
+        assertThat(mapStatus(HttpStatus.FORBIDDEN)).isEqualTo(GeminiFailureReason.CREDENTIALS_REJECTED);
+        assertThat(mapStatus(HttpStatus.NOT_FOUND)).isEqualTo(GeminiFailureReason.MODEL_UNAVAILABLE);
+        assertThat(mapStatus(HttpStatus.TOO_MANY_REQUESTS)).isEqualTo(GeminiFailureReason.RATE_LIMITED);
+        assertThat(mapStatus(HttpStatus.SERVICE_UNAVAILABLE)).isEqualTo(GeminiFailureReason.SERVICE_UNAVAILABLE);
+    }
+
+    @Test
+    void distinguishesTimeoutFromOtherNetworkFailures() {
+        GeminiException timeout = service.mapRestClientFailure(new ResourceAccessException(
+                "provider details",
+                new HttpTimeoutException("timed out")
+        ));
+        GeminiException network = service.mapRestClientFailure(new ResourceAccessException("provider details"));
+
+        assertThat(timeout.reason()).isEqualTo(GeminiFailureReason.TIMEOUT);
+        assertThat(timeout.category()).isEqualTo(GeminiFailureCategory.CONNECTIVITY);
+        assertThat(network.reason()).isEqualTo(GeminiFailureReason.NETWORK_ERROR);
+        assertThat(timeout.userMessage()).doesNotContain("provider details");
+    }
+
+    private GeminiFailureReason mapStatus(HttpStatus status) {
+        RestClientResponseException exception = mock(RestClientResponseException.class);
+        when(exception.getStatusCode()).thenReturn(status);
+        return service.mapRestClientFailure(exception).reason();
+    }
+
+    private ContributionAnalysis parseAnalysis(String analysisJson) {
+        var response = objectMapper.createObjectNode();
+        response.putArray("candidates")
+                .addObject()
+                .putObject("content")
+                .putArray("parts")
+                .addObject()
+                .put("text", analysisJson);
+        return service.parseResponse(response);
+    }
+
+    private void replaceWithInvalidText(ObjectNode parent, String field, String value) {
+        ArrayNode values = (ArrayNode) parent.path(field);
+        values.removeAll();
+        if (value == null) {
+            values.addNull();
+        } else {
+            values.add(value);
+        }
+    }
+
+    private RepositoryData repositoryWithSingleCommit() {
+        return new RepositoryData(
+                "https://github.com/team/project",
+                "project",
+                "main",
+                List.of(new GitCommit(
+                        "abcdef1234567890",
+                        "Ana",
+                        "ana@example.com",
+                        OffsetDateTime.parse("2026-01-01T00:00:00Z"),
+                        "Add feature",
+                        List.of(),
+                        ""
+                ))
+        );
+    }
+
+    private String validNestedAnalysisJson() {
+        return """
+                {
+                  "projectSummary": "Project summary",
+                  "goalAlignment": "Goal alignment",
+                  "contributors": [{
+                    "name": "Ana",
+                    "email": "ana@example.com",
+                    "contributionPercentage": 100,
+                    "contributionLevel": "HIGH",
+                    "summary": "Implemented the feature.",
+                    "mainWork": ["Feature implementation"],
+                    "categorySummary": [{
+                      "category": "FUNCTIONAL",
+                      "commitCount": 1,
+                      "explanation": "Feature work."
+                    }],
+                    "commitAnalyses": [{
+                      "hash": "abcdef1234567890",
+                      "message": "Add feature",
+                      "category": "FUNCTIONAL",
+                      "importance": 5,
+                      "explanation": "Implements the goal."
+                    }],
+                    "riskFlags": ["Review shared ownership."]
+                  }],
+                  "teamIndicators": [{
+                    "type": "BALANCE",
+                    "severity": "INFO",
+                    "title": "Balanced work",
+                    "explanation": "No critical imbalance was detected."
+                  }],
+                  "conclusion": "Conclusion",
+                  "methodology": "Gemini methodology"
+                }
+                """;
     }
 }

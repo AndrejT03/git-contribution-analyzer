@@ -6,18 +6,23 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.*;
 
 class GitRepositoryServiceImplTest {
 
+    private AppSettings settings;
     private GitRepositoryServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new GitRepositoryServiceImpl(mock(AppSettings.class));
+        settings = mock(AppSettings.class);
+        when(settings.gitTimeoutSeconds()).thenReturn(30);
+        service = new GitRepositoryServiceImpl(settings);
     }
 
     @Test
@@ -48,5 +53,56 @@ class GitRepositoryServiceImplTest {
         assertThat(command)
                 .contains("--no-checkout")
                 .doesNotContain("--filter=blob:none");
+    }
+
+    @Test
+    void terminatesTheGitProcessTreeWhenTheOperationTimesOut() throws InterruptedException {
+        Process process = mock(Process.class);
+        ProcessHandle descendant = mock(ProcessHandle.class);
+        ProcessHandle grandchild = mock(ProcessHandle.class);
+        when(process.waitFor(30, TimeUnit.SECONDS)).thenReturn(false);
+        when(process.descendants()).thenReturn(Stream.of(descendant, grandchild));
+
+        assertThatThrownBy(() -> service.waitForCompletion(process))
+                .isInstanceOf(RepositoryException.class)
+                .hasMessage("The Git operation timed out and was stopped.");
+
+        verify(descendant).destroyForcibly();
+        verify(grandchild).destroyForcibly();
+        verify(process).destroyForcibly();
+    }
+
+    @Test
+    void terminatesTheGitProcessTreeAndRestoresTheInterruptFlag() throws InterruptedException {
+        Process process = mock(Process.class);
+        ProcessHandle descendant = mock(ProcessHandle.class);
+        ProcessHandle grandchild = mock(ProcessHandle.class);
+        when(process.waitFor(30, TimeUnit.SECONDS)).thenThrow(new InterruptedException("shutdown"));
+        when(process.descendants()).thenReturn(Stream.of(descendant, grandchild));
+
+        try {
+            assertThatThrownBy(() -> service.waitForCompletion(process))
+                    .isInstanceOf(RepositoryException.class)
+                    .hasMessage("The Git operation was interrupted.")
+                    .hasCauseInstanceOf(InterruptedException.class);
+            assertThat(Thread.currentThread().isInterrupted()).isTrue();
+        } finally {
+            Thread.interrupted();
+        }
+
+        verify(descendant).destroyForcibly();
+        verify(grandchild).destroyForcibly();
+        verify(process).destroyForcibly();
+    }
+
+    @Test
+    void leavesACompletedGitProcessUntouched() throws InterruptedException {
+        Process process = mock(Process.class);
+        when(process.waitFor(30, TimeUnit.SECONDS)).thenReturn(true);
+
+        service.waitForCompletion(process);
+
+        verify(process, never()).descendants();
+        verify(process, never()).destroyForcibly();
     }
 }

@@ -52,10 +52,6 @@ public enum GeminiFailureReason {
     INVALID_RESPONSE(
             GeminiFailureCategory.RESPONSE,
             "Gemini returned an incomplete or invalid analysis."
-    ),
-    CONTRIBUTION_LEVEL_MISMATCH(
-            GeminiFailureCategory.RESPONSE,
-            "Gemini returned a contribution level that does not match its percentage."
     );
 
     private final GeminiFailureCategory category;

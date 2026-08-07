@@ -1,11 +1,9 @@
 package mk.ukim.finki.gitcontributionanalyzer.service.impl;
 import mk.ukim.finki.gitcontributionanalyzer.config.AppSettings;
+import mk.ukim.finki.gitcontributionanalyzer.dto.*;
 import mk.ukim.finki.gitcontributionanalyzer.enums.ContributionLevel;
 import mk.ukim.finki.gitcontributionanalyzer.enums.GeminiFailureReason;
 import mk.ukim.finki.gitcontributionanalyzer.exception.GeminiException;
-import mk.ukim.finki.gitcontributionanalyzer.dto.CommitAnalysis;
-import mk.ukim.finki.gitcontributionanalyzer.dto.ContributorAnalysis;
-import mk.ukim.finki.gitcontributionanalyzer.dto.ContributionAnalysis;
 import mk.ukim.finki.gitcontributionanalyzer.model.RepositoryData;
 import mk.ukim.finki.gitcontributionanalyzer.service.GeminiAnalysisService;
 import org.springframework.http.MediaType;
@@ -151,8 +149,7 @@ public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
                 || isBlank(analysis.conclusion())
                 || isBlank(analysis.methodology())
                 || analysis.teamIndicators() == null
-                || analysis.teamIndicators().stream().anyMatch(indicator -> indicator == null
-                || indicator.severity() == null)) {
+                || analysis.teamIndicators().stream().anyMatch(this::isInvalidTeamIndicator)) {
             throw new GeminiException(GeminiFailureReason.INVALID_RESPONSE);
         }
 
@@ -175,9 +172,10 @@ public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
                     || isBlank(contributor.summary())
                     || contributor.mainWork() == null
                     || contributor.categorySummary() == null
-                    || contributor.categorySummary().stream().anyMatch(summary -> summary == null
-                    || summary.category() == null)
-                    || contributor.riskFlags() == null) {
+                    || contributor.riskFlags() == null
+                    || containsBlank(contributor.mainWork())
+                    || containsBlank(contributor.riskFlags())
+                    || contributor.categorySummary().stream().anyMatch(this::isInvalidCategorySummary)) {
                 throw new GeminiException(GeminiFailureReason.INVALID_RESPONSE);
             }
             if (contributor.contributionPercentage() < 0 || contributor.contributionPercentage() > 100) {
@@ -187,7 +185,7 @@ public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
                     contributor.contributionPercentage()
             );
             if (contributor.contributionLevel() != expectedLevel) {
-                throw new GeminiException(GeminiFailureReason.CONTRIBUTION_LEVEL_MISMATCH);
+                throw new GeminiException(GeminiFailureReason.INVALID_RESPONSE);
             }
             if (contributor.commitAnalyses() == null) {
                 throw new GeminiException(GeminiFailureReason.INVALID_RESPONSE);
@@ -215,7 +213,26 @@ public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
         }
     }
 
-    GeminiException mapRestClientFailure(RestClientException exception) {
+    private boolean isInvalidCategorySummary(CategorySummary category) {
+        return category == null
+                || category.category() == null
+                || category.commitCount() < 0
+                || isBlank(category.explanation());
+    }
+
+    private boolean isInvalidTeamIndicator(TeamIndicator indicator) {
+        return indicator == null
+                || isBlank(indicator.type())
+                || indicator.severity() == null
+                || isBlank(indicator.title())
+                || isBlank(indicator.explanation());
+    }
+
+    private boolean containsBlank(List<String> values) {
+        return values.stream().anyMatch(this::isBlank);
+    }
+
+    public GeminiException mapRestClientFailure(RestClientException exception) {
         if (exception instanceof RestClientResponseException responseException) {
             int status = responseException.getStatusCode().value();
             return new GeminiException(mapHttpFailure(status), exception);

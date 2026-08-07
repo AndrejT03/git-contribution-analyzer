@@ -5,5 +5,6 @@ import java.util.UUID;
 
 public interface ReportService {
     AnalysisReport createReport(AnalysisRequest request);
+    AnalysisReport createReport(AnalysisRequest request, AnalysisProgressListener progressListener);
     AnalysisReport getReport(UUID id);
 }

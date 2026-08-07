@@ -234,6 +234,33 @@ public class GitRepositoryServiceImpl implements GitRepositoryService {
         }
     }
 
+    public void waitForCompletion(Process process) {
+        try {
+            boolean finished = process.waitFor(settings.gitTimeoutSeconds(), TimeUnit.SECONDS);
+            if (!finished) {
+                terminateProcessTree(process);
+                throw new RepositoryException("The Git operation timed out and was stopped.");
+            }
+        } catch (InterruptedException exception) {
+            terminateProcessTree(process);
+            Thread.currentThread().interrupt();
+            throw new RepositoryException("The Git operation was interrupted.", exception);
+        }
+    }
+
+    private void terminateProcessTree(Process process) {
+        List<ProcessHandle> descendants = process.descendants().toList();
+        process.destroyForcibly();
+        for (int index = descendants.size() - 1; index >= 0; index--) {
+            descendants.get(index).destroyForcibly();
+        }
+        try {
+            process.waitFor(2, TimeUnit.SECONDS);
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
     private int parseNumber(String value) {
         try {
             return Integer.parseInt(value);
