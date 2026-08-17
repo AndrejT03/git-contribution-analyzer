@@ -1,13 +1,10 @@
 package mk.ukim.finki.gitcontributionanalyzer.service;
 import mk.ukim.finki.gitcontributionanalyzer.dto.AnalysisRequest;
 import mk.ukim.finki.gitcontributionanalyzer.dto.ContributionAnalysis;
-import mk.ukim.finki.gitcontributionanalyzer.enums.AnalysisSource;
-import mk.ukim.finki.gitcontributionanalyzer.enums.EmailDeliveryStatus;
+import mk.ukim.finki.gitcontributionanalyzer.enums.*;
 import mk.ukim.finki.gitcontributionanalyzer.exception.RepositoryException;
 import mk.ukim.finki.gitcontributionanalyzer.model.AnalysisJob;
-import mk.ukim.finki.gitcontributionanalyzer.enums.AnalysisStatus;
 import mk.ukim.finki.gitcontributionanalyzer.model.AnalysisReport;
-import mk.ukim.finki.gitcontributionanalyzer.enums.AnalysisStage;
 import mk.ukim.finki.gitcontributionanalyzer.model.EmailDelivery;
 import mk.ukim.finki.gitcontributionanalyzer.repository.InMemoryAnalysisJobRepository;
 import mk.ukim.finki.gitcontributionanalyzer.service.impl.AnalysisJobServiceImpl;
@@ -18,9 +15,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.task.TaskRejectedException;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicReference;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -57,7 +56,7 @@ class AnalysisJobServiceImplTest {
 
         var completed = service.startAnalysis(validRequest());
 
-        assertThat(completed.status()).isEqualTo(AnalysisStatus.COMPLETED);
+        assertThat(completed.status()).isEqualTo(AnalysisJobStatus.COMPLETED);
         assertThat(completed.stage()).isEqualTo(AnalysisStage.COMPLETED);
         assertThat(completed.progress()).isEqualTo(100);
         assertThat(completed.reportId()).isEqualTo(report.id());
@@ -81,9 +80,75 @@ class AnalysisJobServiceImplTest {
 
         var completed = service.startAnalysis(validRequest());
 
-        assertThat(completed.status()).isEqualTo(AnalysisStatus.COMPLETED);
+        assertThat(completed.status()).isEqualTo(AnalysisJobStatus.COMPLETED);
         assertThat(completed.progress()).isEqualTo(100);
         assertThat(completed.reportId()).isEqualTo(report.id());
+    }
+
+    @Test
+    void persistsEveryRealFallbackProgressUpdateEvenWhenTheWorkerFinishesBetweenPolls() {
+        InMemoryAnalysisJobRepository repository = new InMemoryAnalysisJobRepository();
+        CapturingExecutor executor = new CapturingExecutor();
+        AnalysisReport report = sampleReport(
+                new EmailDelivery(EmailDeliveryStatus.DISABLED, "Email delivery is disabled."),
+                AnalysisSource.LOCAL_FALLBACK
+        );
+        List<AnalysisJob> snapshots = new ArrayList<>();
+        AtomicReference<UUID> jobId = new AtomicReference<>();
+        when(reportService.createReport(any(), any(AnalysisProgressListener.class)))
+                .thenAnswer(invocation -> {
+                    AnalysisProgressListener listener = invocation.getArgument(1);
+                    UUID currentJobId = jobId.get();
+                    snapshots.add(repository.findById(currentJobId).orElseThrow());
+                    listener.onStage(AnalysisStage.READING_REPOSITORY);
+                    snapshots.add(repository.findById(currentJobId).orElseThrow());
+                    listener.onStage(AnalysisStage.ANALYZING_WITH_GEMINI);
+                    snapshots.add(repository.findById(currentJobId).orElseThrow());
+                    listener.onStage(AnalysisStage.LOCAL_FALLBACK);
+                    listener.onAnalysisSource(AnalysisSource.LOCAL_FALLBACK);
+                    snapshots.add(repository.findById(currentJobId).orElseThrow());
+                    listener.onStage(AnalysisStage.PREPARING_REPORT);
+                    snapshots.add(repository.findById(currentJobId).orElseThrow());
+                    listener.onStage(AnalysisStage.SAVING_REPORT);
+                    snapshots.add(repository.findById(currentJobId).orElseThrow());
+                    listener.onStage(AnalysisStage.DELIVERING_EMAIL);
+                    snapshots.add(repository.findById(currentJobId).orElseThrow());
+                    return report;
+                });
+        AnalysisJobServiceImpl service = new AnalysisJobServiceImpl(reportService, repository, executor);
+
+        AnalysisJob queued = service.startAnalysis(validRequest());
+        jobId.set(queued.id());
+        executor.runTask();
+        AnalysisJob completed = service.findById(queued.id()).orElseThrow();
+
+        assertThat(snapshots)
+                .extracting(AnalysisJob::stage)
+                .containsExactly(
+                        AnalysisStage.STARTING,
+                        AnalysisStage.READING_REPOSITORY,
+                        AnalysisStage.ANALYZING_WITH_GEMINI,
+                        AnalysisStage.LOCAL_FALLBACK,
+                        AnalysisStage.PREPARING_REPORT,
+                        AnalysisStage.SAVING_REPORT,
+                        AnalysisStage.DELIVERING_EMAIL
+                );
+        assertThat(snapshots)
+                .extracting(AnalysisJob::progress)
+                .containsExactly(5, 10, 55, 70, 84, 89, 95);
+        assertThat(completed.progress()).isEqualTo(100);
+        assertThat(completed.analysisSource()).isEqualTo(AnalysisSource.LOCAL_FALLBACK);
+        assertThat(completed.stageHistory()).containsExactly(
+                AnalysisStage.QUEUED,
+                AnalysisStage.STARTING,
+                AnalysisStage.READING_REPOSITORY,
+                AnalysisStage.ANALYZING_WITH_GEMINI,
+                AnalysisStage.LOCAL_FALLBACK,
+                AnalysisStage.PREPARING_REPORT,
+                AnalysisStage.SAVING_REPORT,
+                AnalysisStage.DELIVERING_EMAIL,
+                AnalysisStage.COMPLETED
+        );
     }
 
     @Test
@@ -96,6 +161,7 @@ class AnalysisJobServiceImplTest {
         AnalysisRequest request = validRequest();
 
         var queued = service.startAnalysis(request);
+        assertThat(queued.repositoryLabel()).isEqualTo("team/project");
         request.setRepositoryUrl("https://github.com/changed/after-queue");
         request.setProjectDescription("This description was changed after the request was queued.");
         request.setEmail("changed@example.com");
@@ -113,7 +179,7 @@ class AnalysisJobServiceImplTest {
         assertThat(requestCaptor.getValue().getEmail()).isEqualTo("mentor@example.com");
         assertThat(service.findById(queued.id())).get()
                 .extracting(job -> job.status())
-                .isEqualTo(AnalysisStatus.COMPLETED);
+                .isEqualTo(AnalysisJobStatus.COMPLETED);
     }
 
     @Test
@@ -131,7 +197,7 @@ class AnalysisJobServiceImplTest {
 
         var failed = service.startAnalysis(validRequest());
 
-        assertThat(failed.status()).isEqualTo(AnalysisStatus.FAILED);
+        assertThat(failed.status()).isEqualTo(AnalysisJobStatus.FAILED);
         assertThat(failed.errorMessage())
                 .contains("repository could not be read")
                 .doesNotContain("fatal")
@@ -152,7 +218,7 @@ class AnalysisJobServiceImplTest {
 
         var failed = service.startAnalysis(validRequest());
 
-        assertThat(failed.status()).isEqualTo(AnalysisStatus.FAILED);
+        assertThat(failed.status()).isEqualTo(AnalysisJobStatus.FAILED);
         assertThat(failed.errorMessage())
                 .contains("could not be completed")
                 .doesNotContain("secret internal detail");
@@ -172,7 +238,7 @@ class AnalysisJobServiceImplTest {
 
         var failed = service.startAnalysis(validRequest());
 
-        assertThat(failed.status()).isEqualTo(AnalysisStatus.FAILED);
+        assertThat(failed.status()).isEqualTo(AnalysisJobStatus.FAILED);
         assertThat(failed.progress()).isZero();
         assertThat(failed.errorMessage()).contains("queue").contains("try again");
         verify(reportService, never()).createReport(any(), any(AnalysisProgressListener.class));
@@ -234,6 +300,10 @@ class AnalysisJobServiceImplTest {
     }
 
     private AnalysisReport sampleReport(EmailDelivery delivery) {
+        return sampleReport(delivery, AnalysisSource.GEMINI);
+    }
+
+    private AnalysisReport sampleReport(EmailDelivery delivery, AnalysisSource source) {
         return new AnalysisReport(
                 UUID.randomUUID(),
                 "https://github.com/team/project",
@@ -241,9 +311,11 @@ class AnalysisJobServiceImplTest {
                 "main",
                 "A team planning application with shared tasks and progress tracking.",
                 "mentor@example.com",
-                AnalysisSource.GEMINI,
-                "gemini-test",
-                "Gemini completed the analysis.",
+                source,
+                source == AnalysisSource.GEMINI ? "gemini-test" : "Built-in heuristic rules",
+                source == AnalysisSource.GEMINI
+                        ? "Gemini completed the analysis."
+                        : "The built-in local analyzer completed the analysis.",
                 1,
                 OffsetDateTime.now(),
                 new ContributionAnalysis(

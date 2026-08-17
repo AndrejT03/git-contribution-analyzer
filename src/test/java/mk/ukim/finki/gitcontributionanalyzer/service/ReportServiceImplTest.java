@@ -92,8 +92,9 @@ class ReportServiceImplTest {
         when(settings.geminiModel()).thenReturn("gemini-test-model");
         when(geminiAnalysisService.analyze(any(), any())).thenReturn(geminiResult);
         List<AnalysisStage> stages = new ArrayList<>();
+        List<AnalysisSource> sources = new ArrayList<>();
 
-        var report = reportService.createReport(request, stages::add);
+        var report = reportService.createReport(request, progressListener(stages, sources));
 
         assertThat(report.analysis()).isSameAs(geminiResult);
         assertThat(report.analysisSource()).isEqualTo(AnalysisSource.GEMINI);
@@ -105,6 +106,7 @@ class ReportServiceImplTest {
                 AnalysisStage.SAVING_REPORT,
                 AnalysisStage.DELIVERING_EMAIL
         );
+        assertThat(sources).containsExactly(AnalysisSource.GEMINI);
         verify(localAnalysisService, never()).analyze(any(), any());
         verify(reportRepository).save(report);
     }
@@ -116,8 +118,9 @@ class ReportServiceImplTest {
                 .thenThrow(new GeminiException(GeminiFailureReason.RATE_LIMITED));
         when(localAnalysisService.analyze(any(), any())).thenReturn(localResult);
         List<AnalysisStage> stages = new ArrayList<>();
+        List<AnalysisSource> sources = new ArrayList<>();
 
-        var report = reportService.createReport(request, stages::add);
+        var report = reportService.createReport(request, progressListener(stages, sources));
 
         assertThat(report.analysis()).isSameAs(localResult);
         assertThat(report.analysisSource()).isEqualTo(AnalysisSource.LOCAL_FALLBACK);
@@ -134,6 +137,7 @@ class ReportServiceImplTest {
                 AnalysisStage.SAVING_REPORT,
                 AnalysisStage.DELIVERING_EMAIL
         );
+        assertThat(sources).containsExactly(AnalysisSource.LOCAL_FALLBACK);
         verify(localAnalysisService).analyze(request.getProjectDescription(), repository);
         verify(reportRepository).save(report);
     }
@@ -176,5 +180,21 @@ class ReportServiceImplTest {
                 "Conclusion",
                 methodology
         );
+    }
+
+    private AnalysisProgressListener progressListener(
+            List<AnalysisStage> stages,
+            List<AnalysisSource> sources) {
+        return new AnalysisProgressListener() {
+            @Override
+            public void onStage(AnalysisStage stage) {
+                stages.add(stage);
+            }
+
+            @Override
+            public void onAnalysisSource(AnalysisSource source) {
+                sources.add(source);
+            }
+        };
     }
 }

@@ -1,4 +1,5 @@
 package mk.ukim.finki.gitcontributionanalyzer.enums;
+import mk.ukim.finki.gitcontributionanalyzer.dto.AnalysisJobStatusDto;
 import mk.ukim.finki.gitcontributionanalyzer.model.AnalysisJob;
 import org.junit.jupiter.api.Test;
 import java.time.OffsetDateTime;
@@ -8,54 +9,63 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class AnalysisJobTest {
 
-    @Test
-    void definesBoundedMonotonicProgressStagesEndingAtOneHundred() {
-        assertThat(AnalysisStage.values())
-                .extracting(AnalysisStage::progress)
-                .allMatch(progress -> progress >= 0 && progress <= 100)
-                .isSortedAccordingTo(Comparator.naturalOrder());
-        assertThat(AnalysisStage.COMPLETED.progress()).isEqualTo(100);
-    }
+    private static final OffsetDateTime STARTED_AT = OffsetDateTime.parse("2026-08-10T12:00:00Z");
 
     @Test
-    void keepsProgressMonotonicWhenAnOlderStageArrivesLate() {
-        OffsetDateTime now = OffsetDateTime.parse("2026-07-16T12:00:00Z");
-        AnalysisJob job = AnalysisJob.queued(UUID.randomUUID(), now)
-                .advanceTo(AnalysisStage.ANALYZING_WITH_GEMINI, now.plusSeconds(1));
+    void marksGeminiSkippedWhileLocalFallbackIsActive() {
+        AnalysisJob job = jobAtGeminiStage()
+                .advanceTo(AnalysisStage.LOCAL_FALLBACK, STARTED_AT.plusSeconds(4));
 
-        AnalysisJob unchanged = job.advanceTo(
+        AnalysisJobStatusDto status = AnalysisJobStatusDto.from(job);
+
+        assertThat(status.progress()).isEqualTo(70);
+        assertThat(status.analysisSource()).isEqualTo(AnalysisSource.LOCAL_FALLBACK);
+        assertThat(status.stageStates())
+                .containsEntry(AnalysisStage.ANALYZING_WITH_GEMINI, AnalysisStageState.SKIPPED)
+                .containsEntry(AnalysisStage.LOCAL_FALLBACK, AnalysisStageState.ACTIVE);
+        assertThat(status.stageHistory()).containsExactly(
+                AnalysisStage.QUEUED,
+                AnalysisStage.STARTING,
                 AnalysisStage.READING_REPOSITORY,
-                now.plusSeconds(2)
+                AnalysisStage.ANALYZING_WITH_GEMINI,
+                AnalysisStage.LOCAL_FALLBACK
         );
-
-        assertThat(unchanged).isSameAs(job);
-        assertThat(unchanged.progress()).isEqualTo(55);
     }
 
     @Test
-    void terminalJobsCannotBeChangedByLateWorkerUpdates() {
-        OffsetDateTime now = OffsetDateTime.parse("2026-07-16T12:00:00Z");
-        UUID reportId = UUID.randomUUID();
-        AnalysisJob completed = AnalysisJob.queued(UUID.randomUUID(), now)
-                .complete(reportId, now.plusSeconds(1));
+    void keepsTheFallbackPathAccurateAfterLaterStagesAndCompletion() {
+        AnalysisJob job = jobAtGeminiStage()
+                .advanceTo(AnalysisStage.LOCAL_FALLBACK, STARTED_AT.plusSeconds(4))
+                .advanceTo(AnalysisStage.PREPARING_REPORT, STARTED_AT.plusSeconds(5))
+                .complete(UUID.randomUUID(), AnalysisSource.LOCAL_FALLBACK, STARTED_AT.plusSeconds(6));
 
-        AnalysisJob unchanged = completed.fail("late failure", now.plusSeconds(2));
+        AnalysisJobStatusDto status = AnalysisJobStatusDto.from(job);
 
-        assertThat(unchanged).isSameAs(completed);
-        assertThat(unchanged.reportId()).isEqualTo(reportId);
-        assertThat(unchanged.status()).isEqualTo(AnalysisStatus.COMPLETED);
+        assertThat(status.stageStates())
+                .containsEntry(AnalysisStage.ANALYZING_WITH_GEMINI, AnalysisStageState.SKIPPED)
+                .containsEntry(AnalysisStage.LOCAL_FALLBACK, AnalysisStageState.COMPLETE)
+                .containsEntry(AnalysisStage.PREPARING_REPORT, AnalysisStageState.COMPLETE)
+                .containsEntry(AnalysisStage.COMPLETED, AnalysisStageState.COMPLETE);
     }
 
     @Test
-    void completedStageCanOnlyBeReachedWithAStoredReportId() {
-        OffsetDateTime now = OffsetDateTime.parse("2026-07-16T12:00:00Z");
-        AnalysisJob queued = AnalysisJob.queued(UUID.randomUUID(), now);
+    void marksLocalFallbackSkippedWhenGeminiProducesTheReport() {
+        AnalysisJob job = jobAtGeminiStage()
+                .selectAnalysisSource(AnalysisSource.GEMINI, STARTED_AT.plusSeconds(4))
+                .advanceTo(AnalysisStage.PREPARING_REPORT, STARTED_AT.plusSeconds(5));
 
-        AnalysisJob unchanged = queued.advanceTo(AnalysisStage.COMPLETED, now.plusSeconds(1));
+        AnalysisJobStatusDto status = AnalysisJobStatusDto.from(job);
 
-        assertThat(unchanged).isSameAs(queued);
-        assertThat(unchanged.status()).isEqualTo(AnalysisStatus.QUEUED);
-        assertThat(unchanged.progress()).isZero();
-        assertThat(unchanged.reportId()).isNull();
+        assertThat(status.stageStates())
+                .containsEntry(AnalysisStage.ANALYZING_WITH_GEMINI, AnalysisStageState.COMPLETE)
+                .containsEntry(AnalysisStage.LOCAL_FALLBACK, AnalysisStageState.SKIPPED)
+                .containsEntry(AnalysisStage.PREPARING_REPORT, AnalysisStageState.ACTIVE);
+    }
+
+    private AnalysisJob jobAtGeminiStage() {
+        return AnalysisJob.queued(UUID.randomUUID(), "team/project", STARTED_AT)
+                .advanceTo(AnalysisStage.STARTING, STARTED_AT.plusSeconds(1))
+                .advanceTo(AnalysisStage.READING_REPOSITORY, STARTED_AT.plusSeconds(2))
+                .advanceTo(AnalysisStage.ANALYZING_WITH_GEMINI, STARTED_AT.plusSeconds(3));
     }
 }

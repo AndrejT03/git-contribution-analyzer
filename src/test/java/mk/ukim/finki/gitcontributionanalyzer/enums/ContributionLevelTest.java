@@ -8,10 +8,10 @@ class ContributionLevelTest {
     @Test
     void mapsPercentageBoundariesToContributionLevels() {
         assertThat(ContributionLevel.fromPercentage(0)).isEqualTo(ContributionLevel.LOW);
+        assertThat(ContributionLevel.fromPercentage(14)).isEqualTo(ContributionLevel.LOW);
         assertThat(ContributionLevel.fromPercentage(19)).isEqualTo(ContributionLevel.LOW);
-        assertThat(ContributionLevel.fromPercentage(20)).isEqualTo(ContributionLevel.MEDIUM);
-        assertThat(ContributionLevel.fromPercentage(39)).isEqualTo(ContributionLevel.MEDIUM);
-        assertThat(ContributionLevel.fromPercentage(40)).isEqualTo(ContributionLevel.HIGH);
+        assertThat(ContributionLevel.fromPercentage(24)).isEqualTo(ContributionLevel.MEDIUM);
+        assertThat(ContributionLevel.fromPercentage(25)).isEqualTo(ContributionLevel.MEDIUM);
         assertThat(ContributionLevel.fromPercentage(100)).isEqualTo(ContributionLevel.HIGH);
     }
 

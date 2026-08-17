@@ -268,7 +268,7 @@ public class GitRepositoryServiceImpl implements GitRepositoryService {
         return clean.length() <= 220 ? clean : clean.substring(0, 220) + "...";
     }
 
-    String repositoryName(URI uri) {
+    public String repositoryName(URI uri) {
         String path = uri.getPath().replaceAll("^/+|/+$", "");
         return path.endsWith(".git") ? path.substring(0, path.length() - 4) : path;
     }

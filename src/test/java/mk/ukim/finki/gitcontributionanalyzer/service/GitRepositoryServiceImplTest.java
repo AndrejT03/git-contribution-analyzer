@@ -5,6 +5,7 @@ import mk.ukim.finki.gitcontributionanalyzer.service.impl.GitRepositoryServiceIm
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.net.URI;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
@@ -31,6 +32,14 @@ class GitRepositoryServiceImplTest {
                 .isEqualTo("github.com");
         assertThat(service.validateUrl("https://gitlab.com/group/subgroup/project.git").getHost())
                 .isEqualTo("gitlab.com");
+    }
+
+    @Test
+    void keepsTheOwnerAndNestedGroupInTheRepositoryLabel() {
+        assertThat(service.repositoryName(URI.create("https://github.com/orbital-labs/flightdeck.git")))
+                .isEqualTo("orbital-labs/flightdeck");
+        assertThat(service.repositoryName(URI.create("https://gitlab.com/group/subgroup/project")))
+                .isEqualTo("group/subgroup/project");
     }
 
     @Test

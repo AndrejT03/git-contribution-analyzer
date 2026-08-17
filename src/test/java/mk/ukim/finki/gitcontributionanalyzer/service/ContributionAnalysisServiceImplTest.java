@@ -221,6 +221,8 @@ class ContributionAnalysisServiceImplTest {
             "null-category-summary-entry",
             "null-summary-category",
             "unknown-summary-category",
+            "mismatched-summary-count",
+            "duplicate-summary-category",
             "null-commit-category",
             "unknown-commit-category",
             "null-indicator-severity",
@@ -244,6 +246,9 @@ class ContributionAnalysisServiceImplTest {
             }
             case "null-summary-category" -> categorySummary.putNull("category");
             case "unknown-summary-category" -> categorySummary.put("category", "UNKNOWN");
+            case "mismatched-summary-count" -> categorySummary.put("commitCount", 2);
+            case "duplicate-summary-category" ->
+                    ((ArrayNode) contributor.path("categorySummary")).add(categorySummary.deepCopy());
             case "null-commit-category" -> commitAnalysis.putNull("category");
             case "unknown-commit-category" -> commitAnalysis.put("category", "UNKNOWN");
             case "null-indicator-severity" -> teamIndicator.putNull("severity");
