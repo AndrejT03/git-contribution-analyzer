@@ -73,27 +73,27 @@ public class LocalAnalysisServiceImpl implements LocalAnalysisService {
         int totalScore = contributors.stream().mapToInt(ContributorWork::score).sum();
         int[] percentages = new int[contributors.size()];
         int[] remainders = new int[contributors.size()];
-        int assigned = 0;
+        int assignedPercentage = 0;
 
         for (int index = 0; index < contributors.size(); index++) {
-            int weightedScore = contributors.get(index).score() * 100;
-            percentages[index] = weightedScore / totalScore;
-            remainders[index] = weightedScore % totalScore;
-            assigned += percentages[index];
+            int scaledScore = contributors.get(index).score() * 100;
+            percentages[index] = scaledScore / totalScore;
+            remainders[index] = scaledScore % totalScore;
+            assignedPercentage += percentages[index];
         }
 
-        List<Integer> order = new ArrayList<>();
+        List<Integer> remainderOrder = new ArrayList<>();
         for (int index = 0; index < contributors.size(); index++) {
-            order.add(index);
+            remainderOrder.add(index);
         }
-        order.sort(Comparator
+        remainderOrder.sort(Comparator
                 .comparingInt((Integer index) -> remainders[index])
                 .reversed()
                 .thenComparing(index -> contributors.get(index).email));
 
-        int remaining = 100 - assigned;
+        int remaining = 100 - assignedPercentage;
         for (int index = 0; index < remaining; index++) {
-            percentages[order.get(index)]++;
+            percentages[remainderOrder.get(index)]++;
         }
         return percentages;
     }

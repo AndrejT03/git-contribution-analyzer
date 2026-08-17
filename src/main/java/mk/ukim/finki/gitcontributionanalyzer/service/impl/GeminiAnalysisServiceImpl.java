@@ -1,6 +1,7 @@
 package mk.ukim.finki.gitcontributionanalyzer.service.impl;
 import mk.ukim.finki.gitcontributionanalyzer.config.AppSettings;
 import mk.ukim.finki.gitcontributionanalyzer.dto.*;
+import mk.ukim.finki.gitcontributionanalyzer.enums.CommitCategory;
 import mk.ukim.finki.gitcontributionanalyzer.enums.ContributionLevel;
 import mk.ukim.finki.gitcontributionanalyzer.enums.GeminiFailureReason;
 import mk.ukim.finki.gitcontributionanalyzer.exception.GeminiException;
@@ -28,7 +29,12 @@ import java.util.concurrent.TimeoutException;
 public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
 
     private static final String GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
-
+    private static final Set<String> BLOCKED_FINISH_REASONS = Set.of(
+            "SAFETY",
+            "BLOCKLIST",
+            "PROHIBITED_CONTENT",
+            "SPII"
+    );
     private final AppSettings settings;
     private final GeminiPromptBuilder promptBuilder;
     private final ObjectMapper objectMapper;
@@ -58,12 +64,30 @@ public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
     @Override
     public ContributionAnalysis analyze(String projectDescription, RepositoryData repositoryData) {
         requireConfiguration();
-        String Prompt = promptBuilder.build(projectDescription, repositoryData);
+        String prompt = promptBuilder.build(projectDescription, repositoryData);
 
-        Map<String, Object> request = Map.of(
+        try {
+            JsonNode response = restClient.post()
+                    .uri("/models/{model}:generateContent", settings.geminiModel())
+                    .header("x-goog-api-key", settings.geminiApiKey())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(createRequest(prompt))
+                    .retrieve()
+                    .body(JsonNode.class);
+
+            ContributionAnalysis analysis = parseResponse(response);
+            validateResponse(analysis, repositoryData);
+            return analysis;
+        } catch (RestClientException exception) {
+            throw mapRestClientFailure(exception);
+        }
+    }
+
+    private Map<String, Object> createRequest(String prompt) {
+        return Map.of(
                 "contents", List.of(Map.of(
                         "role", "user",
-                        "parts", List.of(Map.of("text", Prompt))
+                        "parts", List.of(Map.of("text", prompt))
                 )),
                 "generationConfig", Map.of(
                         "temperature", 0.2,
@@ -71,22 +95,6 @@ public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
                         "maxOutputTokens", 32768
                 )
         );
-
-        try {
-            JsonNode response = restClient.post()
-                    .uri("/models/{model}:generateContent", settings.geminiModel())
-                    .header("x-goog-api-key", settings.geminiApiKey())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(request)
-                    .retrieve()
-                    .body(JsonNode.class);
-
-            ContributionAnalysis analysis = parseResponse(response);
-            validateResponse(analysis, repositoryData);
-            return analysis;
-        } catch (RestClientException e) {
-            throw mapRestClientFailure(e);
-        }
     }
 
     public ContributionAnalysis parseResponse(JsonNode response) {
@@ -103,19 +111,7 @@ public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
                 .asString("");
 
         if (json.isBlank()) {
-            String promptBlockReason = response.path("promptFeedback")
-                    .path("blockReason")
-                    .asString("");
-            String candidateFinishReason = response.path("candidates")
-                    .path(0)
-                    .path("finishReason")
-                    .asString("");
-            boolean blocked = !promptBlockReason.isBlank()
-                    || "SAFETY".equals(candidateFinishReason)
-                    || "BLOCKLIST".equals(candidateFinishReason)
-                    || "PROHIBITED_CONTENT".equals(candidateFinishReason)
-                    || "SPII".equals(candidateFinishReason);
-            throw new GeminiException(blocked
+            throw new GeminiException(isBlockedResponse(response)
                     ? GeminiFailureReason.BLOCKED_RESPONSE
                     : GeminiFailureReason.EMPTY_RESPONSE);
         }
@@ -125,6 +121,17 @@ public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
         } catch (JacksonException exception) {
             throw new GeminiException(GeminiFailureReason.INVALID_RESPONSE, exception);
         }
+    }
+
+    private boolean isBlockedResponse(JsonNode response) {
+        String promptBlockReason = response.path("promptFeedback")
+                .path("blockReason")
+                .asString("");
+        String finishReason = response.path("candidates")
+                .path(0)
+                .path("finishReason")
+                .asString("");
+        return !promptBlockReason.isBlank() || BLOCKED_FINISH_REASONS.contains(finishReason);
     }
 
     private void requireConfiguration() {
@@ -138,11 +145,36 @@ public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
     }
 
     public void validateResponse(ContributionAnalysis analysis, RepositoryData repositoryData) {
+        validateAnalysis(analysis);
+
+        int percentageSum = 0;
+        Set<String> analyzedHashes = new HashSet<>();
+
+        for (ContributorAnalysis contributor : analysis.contributors()) {
+            validateContributor(contributor);
+            percentageSum += contributor.contributionPercentage();
+
+            for (CommitAnalysis commit : contributor.commitAnalyses()) {
+                validateCommit(commit);
+                if (!analyzedHashes.add(commit.hash())) {
+                    throw invalidResponse();
+                }
+            }
+        }
+
+        if (percentageSum != 100) {
+            throw invalidResponse();
+        }
+
+        validateCommitCoverage(repositoryData, analyzedHashes);
+    }
+
+    private void validateAnalysis(ContributionAnalysis analysis) {
         if (analysis == null || analysis.contributors() == null || analysis.contributors().isEmpty()) {
-            throw new GeminiException(GeminiFailureReason.INVALID_RESPONSE);
+            throw invalidResponse();
         }
         if (analysis.contributors().stream().anyMatch(Objects::isNull)) {
-            throw new GeminiException(GeminiFailureReason.INVALID_RESPONSE);
+            throw invalidResponse();
         }
         if (isBlank(analysis.projectSummary())
                 || isBlank(analysis.goalAlignment())
@@ -150,67 +182,79 @@ public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
                 || isBlank(analysis.methodology())
                 || analysis.teamIndicators() == null
                 || analysis.teamIndicators().stream().anyMatch(this::isInvalidTeamIndicator)) {
-            throw new GeminiException(GeminiFailureReason.INVALID_RESPONSE);
+            throw invalidResponse();
+        }
+    }
+
+    private void validateContributor(ContributorAnalysis contributor) {
+        if (isBlank(contributor.name())
+                || isBlank(contributor.email())
+                || contributor.contributionLevel() == null
+                || isBlank(contributor.summary())
+                || contributor.mainWork() == null
+                || containsBlank(contributor.mainWork())
+                || contributor.categorySummary() == null
+                || contributor.categorySummary().stream().anyMatch(this::isInvalidCategorySummary)
+                || contributor.commitAnalyses() == null
+                || contributor.commitAnalyses().stream().anyMatch(Objects::isNull)
+                || contributor.commitAnalyses().stream().anyMatch(commit -> commit.category() == null)
+                || contributor.riskFlags() == null
+                || containsBlank(contributor.riskFlags())
+                || contributor.contributionPercentage() < 0
+                || contributor.contributionPercentage() > 100) {
+            throw invalidResponse();
+        }
+        ContributionLevel expectedLevel = ContributionLevel.fromPercentage(
+                contributor.contributionPercentage()
+        );
+        if (contributor.contributionLevel() != expectedLevel) {
+            throw invalidResponse();
+        }
+        validateCategorySummary(contributor);
+    }
+
+    private void validateCategorySummary(ContributorAnalysis contributor) {
+        Map<CommitCategory, Integer> expectedCounts = new EnumMap<>(CommitCategory.class);
+        contributor.commitAnalyses().forEach(commit ->
+                expectedCounts.merge(commit.category(), 1, Integer::sum));
+
+        Map<CommitCategory, Integer> providedCounts = new EnumMap<>(CommitCategory.class);
+        for (CategorySummary summary : contributor.categorySummary()) {
+            if (providedCounts.put(summary.category(), summary.commitCount()) != null) {
+                throw invalidResponse();
+            }
         }
 
-        int percentageSum = analysis.contributors().stream()
-                .mapToInt(ContributorAnalysis::contributionPercentage)
-                .sum();
-        if (percentageSum != 100) {
-            throw new GeminiException(GeminiFailureReason.INVALID_RESPONSE);
+        if (!providedCounts.equals(expectedCounts)) {
+            throw invalidResponse();
         }
+    }
 
+    private void validateCommit(CommitAnalysis commit) {
+        if (commit == null
+                || isBlank(commit.hash())
+                || commit.hash().length() < 7
+                || isBlank(commit.message())
+                || commit.category() == null
+                || isBlank(commit.explanation())
+                || commit.importance() < 1
+                || commit.importance() > 5) {
+            throw invalidResponse();
+        }
+    }
+
+    private void validateCommitCoverage(
+            RepositoryData repositoryData,
+            Set<String> analyzedHashes) {
         Set<String> expectedHashes = new HashSet<>();
         repositoryData.commits().forEach(commit -> expectedHashes.add(commit.hash()));
-
-        Set<String> analyzedHashes = new HashSet<>();
-        int analyzedCommitCount = 0;
-        for (ContributorAnalysis contributor : analysis.contributors()) {
-            if (isBlank(contributor.name())
-                    || isBlank(contributor.email())
-                    || contributor.contributionLevel() == null
-                    || isBlank(contributor.summary())
-                    || contributor.mainWork() == null
-                    || contributor.categorySummary() == null
-                    || contributor.riskFlags() == null
-                    || containsBlank(contributor.mainWork())
-                    || containsBlank(contributor.riskFlags())
-                    || contributor.categorySummary().stream().anyMatch(this::isInvalidCategorySummary)) {
-                throw new GeminiException(GeminiFailureReason.INVALID_RESPONSE);
-            }
-            if (contributor.contributionPercentage() < 0 || contributor.contributionPercentage() > 100) {
-                throw new GeminiException(GeminiFailureReason.INVALID_RESPONSE);
-            }
-            ContributionLevel expectedLevel = ContributionLevel.fromPercentage(
-                    contributor.contributionPercentage()
-            );
-            if (contributor.contributionLevel() != expectedLevel) {
-                throw new GeminiException(GeminiFailureReason.INVALID_RESPONSE);
-            }
-            if (contributor.commitAnalyses() == null) {
-                throw new GeminiException(GeminiFailureReason.INVALID_RESPONSE);
-            }
-            for (CommitAnalysis commit : contributor.commitAnalyses()) {
-                if (commit == null) {
-                    throw new GeminiException(GeminiFailureReason.INVALID_RESPONSE);
-                }
-                analyzedCommitCount++;
-                if (isBlank(commit.hash())
-                        || commit.hash().length() < 7
-                        || isBlank(commit.message())
-                        || commit.category() == null
-                        || isBlank(commit.explanation())
-                        || commit.importance() < 1
-                        || commit.importance() > 5) {
-                    throw new GeminiException(GeminiFailureReason.INVALID_RESPONSE);
-                }
-                analyzedHashes.add(commit.hash());
-            }
+        if (!analyzedHashes.equals(expectedHashes)) {
+            throw invalidResponse();
         }
+    }
 
-        if (!analyzedHashes.equals(expectedHashes) || analyzedCommitCount != expectedHashes.size()) {
-            throw new GeminiException(GeminiFailureReason.INVALID_RESPONSE);
-        }
+    private GeminiException invalidResponse() {
+        return new GeminiException(GeminiFailureReason.INVALID_RESPONSE);
     }
 
     private boolean isInvalidCategorySummary(CategorySummary category) {

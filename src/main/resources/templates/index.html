@@ -3,76 +3,142 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
   <title>Git Contribution AI</title>
-  <link rel="stylesheet" th:href="@{/css/style.css}">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" th:href="@{/css/style.css(v='25.9')}">
 </head>
-<body>
-<main class="page-shell">
-  <section class="intro">
-    <span class="badge">Diplomska</span>
-    <h1>Who really contributed to the project?</h1>
-    <p class="lead">
-      Git Contribution AI reads the commit history and prepares
-      a clear report about each team member's work.
-    </p>
+<body class="home-body">
+<header class="site-header">
+  <div class="site-header__inner">
+    <a class="site-brand" th:href="@{/}" aria-label="Git Contribution AI home">
+      <span class="site-brand__mark" aria-hidden="true"><i class="bi bi-bezier2"></i></span>
+      <span class="site-brand__name">Git Contribution <span>AI</span></span>
+    </a>
+    <a class="site-header__link" href="#how-it-works">How it works</a>
+  </div>
+</header>
 
-    <div class="steps" aria-label="Analysis steps">
-      <div><strong>1</strong><span>Download Git history</span></div>
-      <div><strong>2</strong><span>Analyze contribution</span></div>
-      <div><strong>3</strong><span>Show the complete report on screen</span></div>
-      <div><strong>4</strong><span>Send a copy by email</span></div>
+<main>
+  <section class="home-hero" aria-labelledby="home-title">
+    <div class="home-hero__content">
+      <p class="product-kicker">Git Contribution AI</p>
+      <h1 id="home-title">Who really contributed to<br>the project?</h1>
+      <p class="home-hero__lead">
+        Git Contribution AI reads the commit history and<br>
+        prepares a clear report about each team member's work.
+      </p>
+
+      <nav class="hero-actions" aria-label="Page shortcuts">
+        <a href="#new-analysis">Start analysis <i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+        <a href="#how-it-works">Understand how it works <i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+      </nav>
+
+      <ul class="trust-row" aria-label="Supported repositories and privacy">
+        <li><i class="bi bi-github" aria-hidden="true"></i> Public GitHub</li>
+        <li><i class="bi bi-gitlab" aria-hidden="true"></i> Public GitLab</li>
+        <li><i class="bi bi-shield-check" aria-hidden="true"></i> Read-only, never stored</li>
+      </ul>
     </div>
   </section>
 
-  <section class="form-card">
-    <div class="form-heading">
-      <p class="eyebrow">New analysis</p>
-      <h2>Project details</h2>
-      <p>Only public GitHub and GitLab repositories can be analyzed.</p>
+  <section id="new-analysis" class="analysis-section" aria-labelledby="analysis-title">
+    <div class="section-intro">
+      <h2 id="analysis-title">New analysis</h2>
+      <p>Three fields. The full report opens in your browser — email is only a<br class="desktop-only"> copy.</p>
     </div>
 
-    <div class="error-message" th:if="${error}" th:text="${error}"></div>
-
-    <form id="analysisForm" th:action="@{/analyze}" th:object="${analysisRequest}" method="post">
-      <div class="field">
-        <label for="repositoryUrl">Repository URL</label>
-        <input id="repositoryUrl" type="url" th:field="*{repositoryUrl}"
-               placeholder="https://github.com/username/project" required>
-        <small class="error" th:if="${#fields.hasErrors('repositoryUrl')}"
-               th:errors="*{repositoryUrl}"></small>
+    <div class="analysis-form-card">
+      <div class="error-message" th:if="${error}" role="alert">
+        <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+        <span th:text="${error}">The request could not be completed.</span>
       </div>
 
-      <div class="field">
-        <label for="projectDescription">Project goal or short description</label>
-        <textarea id="projectDescription" th:field="*{projectDescription}" rows="6"
-                  placeholder="Explain what the project should achieve..." required></textarea>
-        <small class="hint">The description helps Gemini and the local rules evaluate each change.</small>
-        <small class="error" th:if="${#fields.hasErrors('projectDescription')}"
-               th:errors="*{projectDescription}"></small>
-      </div>
+      <form id="analysisForm" th:action="@{/analyze}" th:object="${analysisRequest}" method="post">
+        <div class="form-field">
+          <label for="repositoryUrl">Repository URL</label>
+          <input id="repositoryUrl" type="url" th:field="*{repositoryUrl}"
+                 placeholder="https://github.com/org/repo" maxlength="300"
+                 autocomplete="url" required aria-describedby="repositoryHint repositoryError">
+          <small id="repositoryHint" class="field-hint">Public HTTPS GitHub or GitLab repositories only.</small>
+          <small id="repositoryError" class="field-error" th:if="${#fields.hasErrors('repositoryUrl')}"
+                 th:errors="*{repositoryUrl}" role="alert"></small>
+        </div>
 
-      <div class="field">
-        <label for="email">Email copy of the report</label>
-        <input id="email" type="email" th:field="*{email}"
-               placeholder="name@example.com" required>
-        <small class="hint">The complete result will also open in this browser.</small>
-        <small class="error" th:if="${#fields.hasErrors('email')}"
-               th:errors="*{email}"></small>
-      </div>
+        <div class="form-field">
+          <div class="field-label-row">
+            <label for="projectDescription">Project goal or description</label>
+            <span id="descriptionCounter">0/2000</span>
+          </div>
+          <textarea id="projectDescription" th:field="*{projectDescription}" rows="5"
+                    minlength="20" maxlength="2000"
+                    placeholder="What was this project meant to achieve? What defines success?"
+                    required aria-describedby="descriptionHint descriptionError"></textarea>
+          <small id="descriptionHint" class="field-hint">20–2,000 characters. Used to assess goal alignment.</small>
+          <small id="descriptionError" class="field-error" th:if="${#fields.hasErrors('projectDescription')}"
+                 th:errors="*{projectDescription}" role="alert"></small>
+        </div>
 
-      <button id="submitButton" type="submit">Start analysis</button>
-      <p class="privacy-note">The code is used only for the current analysis and is not stored.</p>
-    </form>
+        <div class="form-field form-field--email">
+          <label for="email">Email address</label>
+          <input id="email" type="email" th:field="*{email}"
+                 placeholder="you@school.edu" autocomplete="email" required
+                 aria-describedby="emailHint emailError">
+          <small id="emailHint" class="field-hint">For a secondary copy only — the browser report is the primary result.</small>
+          <small id="emailError" class="field-error" th:if="${#fields.hasErrors('email')}"
+                 th:errors="*{email}" role="alert"></small>
+        </div>
+
+        <button id="submitButton" class="primary-button" type="submit">Start analysis</button>
+        <p class="privacy-note"><i class="bi bi-lock" aria-hidden="true"></i> The code is used only for the current analysis and is not stored.</p>
+      </form>
+    </div>
+  </section>
+
+  <section id="how-it-works" class="how-section" aria-labelledby="how-title">
+    <div class="section-intro">
+      <h2 id="how-title">How it works</h2>
+      <p>Four stages, from raw Git history to a report you can read and share.</p>
+    </div>
+
+    <ol class="how-grid">
+      <li class="how-card">
+        <div class="how-card__step"><i class="bi bi-bezier2" aria-hidden="true"></i><span>Step 1</span></div>
+        <h3>Read Git history</h3>
+        <p>Clone commits, authors, and diffs from the public repository.</p>
+      </li>
+      <li class="how-card">
+        <div class="how-card__step"><i class="bi bi-cpu" aria-hidden="true"></i><span>Step 2</span></div>
+        <h3>Analyze contributions</h3>
+        <p>Gemini classifies each commit, with a deterministic local fallback.</p>
+      </li>
+      <li class="how-card">
+        <div class="how-card__step"><i class="bi bi-file-earmark-text" aria-hidden="true"></i><span>Step 3</span></div>
+        <h3>Build the browser report</h3>
+        <p>A detailed, scannable report opens right here in your browser.</p>
+      </li>
+      <li class="how-card">
+        <div class="how-card__step"><i class="bi bi-envelope" aria-hidden="true"></i><span>Step 4</span></div>
+        <h3>Attempt email delivery</h3>
+        <p>A secondary copy is sent to your inbox whenever possible.</p>
+      </li>
+    </ol>
   </section>
 </main>
 
+<footer class="site-footer">
+  <p>Git Contribution AI · Diploma Project. Git activity is supporting evidence, not a final measurement of value.</p>
+</footer>
+
 <div id="loadingOverlay" class="loading-overlay" hidden role="status" aria-live="polite">
   <div class="loading-card">
-    <span class="spinner" aria-hidden="true"></span>
-    <h2>Contribution analysis in progress</h2>
-    <p>The repository is being downloaded and its commits are being processed. This may take several minutes.</p>
+    <span class="loading-spinner" aria-hidden="true"></span>
+    <h2>Starting analysis</h2>
+    <p>Preparing a live progress page for this repository.</p>
   </div>
 </div>
-<script th:src="@{/js/app.js}"></script>
+
+<script th:src="@{/js/app.js(v='25.9')}"></script>
 </body>
 </html>

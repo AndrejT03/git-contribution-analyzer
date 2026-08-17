@@ -1,5 +1,6 @@
 package mk.ukim.finki.gitcontributionanalyzer.service.impl;
 import mk.ukim.finki.gitcontributionanalyzer.config.AppSettings;
+import mk.ukim.finki.gitcontributionanalyzer.dto.AnalysisOutcome;
 import mk.ukim.finki.gitcontributionanalyzer.dto.AnalysisRequest;
 import mk.ukim.finki.gitcontributionanalyzer.dto.ContributionAnalysis;
 import mk.ukim.finki.gitcontributionanalyzer.enums.AnalysisSource;
@@ -45,61 +46,7 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public AnalysisReport createReport(AnalysisRequest request) {
-        RepositoryData repository = gitRepositoryService.readRepository(request.getRepositoryUrl());
-        ContributionAnalysis analysis;
-        AnalysisSource analysisSource;
-        String analysisModel;
-        String analysisNotice;
-
-        try {
-            analysis = geminiAnalysisService.analyze(request.getProjectDescription(), repository);
-            analysisSource = AnalysisSource.GEMINI;
-            analysisModel = settings.geminiModel();
-            analysisNotice = "Gemini analyzed the Git history using the supplied project goal.";
-        } catch (GeminiException exception) {
-            LOGGER.warn(
-                    "Gemini analysis failed; using the local fallback. Category: {}, reason: {}",
-                    exception.category(),
-                    exception.reason()
-            );
-            analysis = localAnalysisService.analyze(request.getProjectDescription(), repository);
-            analysisSource = AnalysisSource.LOCAL_FALLBACK;
-            analysisModel = "Built-in heuristic rules";
-            analysisNotice = exception.userMessage() + " This report was generated with the built-in local heuristic analyzer.";
-        }
-
-        AnalysisReport report = new AnalysisReport(
-                UUID.randomUUID(),
-                repository.url(),
-                repository.name(),
-                repository.defaultBranch(),
-                request.getProjectDescription(),
-                request.getEmail(),
-                analysisSource,
-                analysisModel,
-                analysisNotice,
-                repository.commits().size(),
-                OffsetDateTime.now(),
-                analysis,
-                EmailDelivery.pending()
-        );
-
-        reportRepository.save(report);
-
-        EmailDelivery delivery;
-        try {
-            delivery = emailReportService.sendReport(report);
-        } catch (RuntimeException exception) {
-            LOGGER.warn("The report was generated, but email delivery failed unexpectedly.", exception);
-            delivery = new EmailDelivery(
-                    EmailDeliveryStatus.FAILED,
-                    "The report is available on screen, but email delivery failed unexpectedly."
-            );
-        }
-
-        report = report.withEmailDelivery(delivery);
-        reportRepository.save(report);
-        return report;
+        return createReport(request, AnalysisProgressListener.none());
     }
 
     @Override
@@ -110,17 +57,37 @@ public class ReportServiceImpl implements ReportService {
 
         progressListener.onStage(READING_REPOSITORY);
         RepositoryData repository = gitRepositoryService.readRepository(request.getRepositoryUrl());
-        ContributionAnalysis analysis;
-        AnalysisSource analysisSource;
-        String analysisModel;
-        String analysisNotice;
+        AnalysisOutcome outcome = analyzeWithFallback(request, repository, progressListener);
 
+        progressListener.onStage(PREPARING_REPORT);
+        AnalysisReport report = createPendingReport(request, repository, outcome);
+
+        progressListener.onStage(SAVING_REPORT);
+        reportRepository.save(report);
+
+        progressListener.onStage(DELIVERING_EMAIL);
+        report = report.withEmailDelivery(deliverEmail(report));
+        reportRepository.save(report);
+        return report;
+    }
+
+    private AnalysisOutcome analyzeWithFallback(
+            AnalysisRequest request,
+            RepositoryData repository,
+            AnalysisProgressListener progressListener) {
         try {
             progressListener.onStage(ANALYZING_WITH_GEMINI);
-            analysis = geminiAnalysisService.analyze(request.getProjectDescription(), repository);
-            analysisSource = AnalysisSource.GEMINI;
-            analysisModel = settings.geminiModel();
-            analysisNotice = "Gemini analyzed the Git history using the supplied project goal.";
+            ContributionAnalysis analysis = geminiAnalysisService.analyze(
+                    request.getProjectDescription(),
+                    repository
+            );
+            progressListener.onAnalysisSource(AnalysisSource.GEMINI);
+            return new AnalysisOutcome(
+                    analysis,
+                    AnalysisSource.GEMINI,
+                    settings.geminiModel(),
+                    "Gemini analyzed the Git history using the supplied project goal."
+            );
         } catch (GeminiException exception) {
             LOGGER.warn(
                     "Gemini analysis failed; using the local fallback. Category: {}, reason: {}",
@@ -128,48 +95,52 @@ public class ReportServiceImpl implements ReportService {
                     exception.reason()
             );
             progressListener.onStage(LOCAL_FALLBACK);
-            analysis = localAnalysisService.analyze(request.getProjectDescription(), repository);
-            analysisSource = AnalysisSource.LOCAL_FALLBACK;
-            analysisModel = "Built-in heuristic rules";
-            analysisNotice = exception.userMessage()
-                    + " This report was generated with the built-in local heuristic analyzer.";
+            progressListener.onAnalysisSource(AnalysisSource.LOCAL_FALLBACK);
+            ContributionAnalysis analysis = localAnalysisService.analyze(
+                    request.getProjectDescription(),
+                    repository
+            );
+            return new AnalysisOutcome(
+                    analysis,
+                    AnalysisSource.LOCAL_FALLBACK,
+                    "Built-in heuristic rules",
+                    exception.userMessage()
+                            + " This report was generated with the built-in local heuristic analyzer."
+            );
         }
+    }
 
-        progressListener.onStage(PREPARING_REPORT);
-        AnalysisReport report = new AnalysisReport(
+    private AnalysisReport createPendingReport(
+            AnalysisRequest request,
+            RepositoryData repository,
+            AnalysisOutcome outcome) {
+        return new AnalysisReport(
                 UUID.randomUUID(),
                 repository.url(),
                 repository.name(),
                 repository.defaultBranch(),
                 request.getProjectDescription(),
                 request.getEmail(),
-                analysisSource,
-                analysisModel,
-                analysisNotice,
+                outcome.source(),
+                outcome.model(),
+                outcome.notice(),
                 repository.commits().size(),
                 OffsetDateTime.now(),
-                analysis,
+                outcome.analysis(),
                 EmailDelivery.pending()
         );
+    }
 
-        progressListener.onStage(SAVING_REPORT);
-        reportRepository.save(report);
-
-        progressListener.onStage(DELIVERING_EMAIL);
-        EmailDelivery delivery;
+    private EmailDelivery deliverEmail(AnalysisReport report) {
         try {
-            delivery = emailReportService.sendReport(report);
+            return emailReportService.sendReport(report);
         } catch (RuntimeException exception) {
             LOGGER.warn("The report was generated, but email delivery failed unexpectedly.", exception);
-            delivery = new EmailDelivery(
+            return new EmailDelivery(
                     EmailDeliveryStatus.FAILED,
                     "The report is available on screen, but email delivery failed unexpectedly."
             );
         }
-
-        report = report.withEmailDelivery(delivery);
-        reportRepository.save(report);
-        return report;
     }
 
     @Override

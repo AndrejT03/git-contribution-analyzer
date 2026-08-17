@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title th:text="'Contribution Report - ' + ${report.repositoryName}">Contribution Report</title>
+    <style type="text/css">
+        @page {
+            size: A4;
+            margin: 14mm 13mm 16mm;
+            @bottom-center {
+                content: "Page " counter(page) " / " counter(pages);
+                color: #707075;
+                font-size: 8pt;
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            color: #1d1d1f;
+            background: #ffffff;
+            font-family: "Liberation Sans", sans-serif;
+            font-size: 10.5pt;
+            line-height: 1.45;
+        }
+
+        h1, h2, h3, h4, p, ul, ol, dl {
+            margin-top: 0;
+        }
+
+        h1 {
+            margin-bottom: 8pt;
+            font-size: 24pt;
+            line-height: 1.1;
+        }
+
+        h2 {
+            margin: 24pt 0 9pt;
+            padding-bottom: 5pt;
+            border-bottom: 1px solid #d2d2d7;
+            font-size: 16pt;
+            page-break-after: avoid;
+        }
+
+        h3 {
+            margin-bottom: 3pt;
+            font-size: 13pt;
+        }
+
+        h4 {
+            margin: 10pt 0 4pt;
+            color: #46464a;
+            font-size: 10.5pt;
+        }
+
+        .muted {
+            color: #6e6e73;
+        }
+
+        .small {
+            font-size: 9.5pt;
+        }
+
+        .report-header {
+            padding: 20pt;
+            color: #ffffff;
+            background: #1d1d1f;
+            border-radius: 12pt;
+        }
+
+        .kicker {
+            margin-bottom: 8pt;
+            color: #86bdf5;
+            font-size: 9pt;
+            letter-spacing: 1.2pt;
+            text-transform: uppercase;
+        }
+
+        .summary {
+            margin: 0;
+            color: #e3e3e6;
+            font-size: 10.5pt;
+        }
+
+        .meta {
+            width: 100%;
+            margin-top: 14pt;
+            border-collapse: collapse;
+        }
+
+        .meta td {
+            width: 25%;
+            padding: 7pt 8pt;
+            border-left: 1px solid #46464a;
+            vertical-align: top;
+        }
+
+        .meta td:first-child {
+            border-left: 0;
+            padding-left: 0;
+        }
+
+        .meta-label {
+            display: block;
+            margin-bottom: 2pt;
+            color: #a1a1a6;
+            font-size: 8.5pt;
+            text-transform: uppercase;
+        }
+
+        .two-column {
+            width: 100%;
+            margin-top: 18pt;
+            border-collapse: separate;
+            border-spacing: 8pt 0;
+            table-layout: fixed;
+        }
+
+        .two-column td {
+            width: 50%;
+            padding: 12pt;
+            border: 1px solid #e3e3e6;
+            border-radius: 9pt;
+            vertical-align: top;
+        }
+
+        .eyebrow {
+            margin-bottom: 7pt;
+            color: #707075;
+            font-size: 9pt;
+            letter-spacing: 0.6pt;
+            text-transform: uppercase;
+        }
+
+        .overview {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .overview td {
+            padding: 6pt 0;
+            border-bottom: 1px solid #ececef;
+            vertical-align: middle;
+        }
+
+        .overview .name {
+            width: 31%;
+            padding-right: 10pt;
+        }
+
+        .overview .bar-cell {
+            width: 59%;
+        }
+
+        .overview .percentage {
+            width: 10%;
+            text-align: right;
+        }
+
+        .bar-track {
+            width: 100%;
+            height: 10pt;
+            overflow: hidden;
+            border: 1px solid #d2d2d7;
+            border-radius: 6pt;
+            background: #f5f5f7;
+        }
+
+        .bar-fill {
+            height: 10pt;
+            background: #0071e3;
+        }
+
+        .contributor {
+            margin: 0 0 13pt;
+            padding: 13pt;
+            border: 1px solid #d2d2d7;
+            border-radius: 10pt;
+            page-break-inside: avoid;
+        }
+
+        .contributor-heading {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .contributor-heading td {
+            vertical-align: top;
+        }
+
+        .contributor-heading .score {
+            width: 28%;
+            color: #0071e3;
+            font-size: 16pt;
+            text-align: right;
+        }
+
+        .level {
+            display: block;
+            margin-top: 2pt;
+            color: #6e6e73;
+            font-size: 9pt;
+        }
+
+        .work-list,
+        .risk-list,
+        .indicator-list {
+            margin-bottom: 0;
+            padding-left: 16pt;
+        }
+
+        .category-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .category-table td {
+            padding: 3pt 0;
+            border-bottom: 1px solid #ececef;
+        }
+
+        .category-table .category-count {
+            width: 18%;
+            text-align: right;
+        }
+
+        .commit-group {
+            margin: 0 0 18pt;
+        }
+
+        .commit-group-title {
+            margin: 14pt 0 7pt;
+            font-size: 12pt;
+            page-break-after: avoid;
+        }
+
+        .commit {
+            margin-bottom: 7pt;
+            padding: 8pt 9pt;
+            border-left: 3pt solid #0071e3;
+            background: #f5f5f7;
+            page-break-inside: avoid;
+        }
+
+        .commit p {
+            margin-bottom: 0;
+        }
+
+        .commit-meta {
+            margin-bottom: 3pt;
+            color: #6e6e73;
+            font-size: 9pt;
+        }
+
+        .commit-hash {
+            color: #005bb8;
+            font-family: monospace;
+        }
+
+        .assessment {
+            padding: 12pt;
+            border: 1px solid #d2d2d7;
+            border-radius: 9pt;
+            page-break-inside: avoid;
+        }
+
+        .indicator {
+            margin-bottom: 7pt;
+        }
+
+        .indicator-severity {
+            color: #6e6e73;
+            font-size: 9pt;
+            text-transform: uppercase;
+        }
+
+        .disclaimer {
+            margin-top: 22pt;
+            padding-top: 9pt;
+            color: #707075;
+            border-top: 1px solid #d2d2d7;
+            font-size: 9pt;
+        }
+    </style>
+</head>
+<body>
+<div class="report-header">
+    <p class="kicker">Contribution Report</p>
+    <h1 th:text="${report.repositoryName}">orbital-labs/flightdeck</h1>
+    <p class="summary" th:text="${report.analysis.projectSummary}">Project summary.</p>
+    <table class="meta">
+        <tr>
+            <td>
+                <span class="meta-label">Default branch</span>
+                <span th:text="${report.defaultBranch}">main</span>
+            </td>
+            <td>
+                <span class="meta-label">Commits analyzed</span>
+                <span th:text="${report.analyzedCommitCount}">486</span>
+            </td>
+            <td>
+                <span class="meta-label">Analysis engine</span>
+                <span th:text="${report.analysisModel}">Gemini 2.5 Pro</span>
+            </td>
+            <td>
+                <span class="meta-label">Generated</span>
+                <span th:text="${#temporals.format(report.generatedAt, 'MMMM d, yyyy')}">August 9, 2026</span>
+            </td>
+        </tr>
+    </table>
+</div>
+
+<table class="two-column">
+    <tr>
+        <td>
+            <p class="eyebrow">Project goal</p>
+            <p th:text="${report.projectDescription}">Project description.</p>
+        </td>
+        <td>
+            <p class="eyebrow">Goal-alignment assessment</p>
+            <p th:text="${report.analysis.goalAlignment}">Goal alignment assessment.</p>
+        </td>
+    </tr>
+</table>
+
+<h2>Contribution overview</h2>
+<table class="overview">
+    <tr th:each="contributor : ${report.analysis.contributors}">
+        <td class="name"><strong th:text="${contributor.name}">Contributor</strong></td>
+        <td class="bar-cell">
+            <div class="bar-track">
+                <div class="bar-fill" th:style="|width: ${contributor.contributionPercentage}%;|"></div>
+            </div>
+        </td>
+        <td class="percentage"><strong th:text="${contributor.contributionPercentage} + '%'">38%</strong></td>
+    </tr>
+</table>
+<p class="muted small">Percentages reflect Git-visible commit contribution and total 100%.</p>
+
+<h2>Contributors</h2>
+<div th:each="contributor : ${report.analysis.contributors}">
+    <div class="contributor">
+        <table class="contributor-heading">
+            <tr>
+                <td>
+                    <h3 th:text="${contributor.name}">Contributor</h3>
+                    <span class="muted small" th:text="${contributor.email}">contributor@example.com</span>
+                </td>
+                <td class="score">
+                    <span th:text="${contributor.contributionPercentage} + '%'">38%</span>
+                    <span class="level" th:text="${contributor.contributionLevel.displayName()} + ' contribution'">High contribution</span>
+                </td>
+            </tr>
+        </table>
+
+        <p th:text="${contributor.summary}">Contributor summary.</p>
+
+        <h4>Main work</h4>
+        <ul class="work-list">
+            <li th:each="work : ${contributor.mainWork}" th:text="${work}">Main work item</li>
+        </ul>
+
+        <h4>Category breakdown</h4>
+        <table class="category-table" th:if="${!contributor.categorySummary.isEmpty()}">
+            <tr th:each="category : ${contributor.categorySummary}">
+                <td>
+                    <strong th:text="${category.category.displayName()}">Functional</strong>
+                    <span class="muted" th:text="' - ' + ${category.explanation}"> - Explanation</span>
+                </td>
+                <td class="category-count" th:text="${category.commitCount} + ' commits'">10 commits</td>
+            </tr>
+        </table>
+        <p class="muted small" th:if="${contributor.categorySummary.isEmpty()}">No commit categories were available.</p>
+
+        <div th:if="${!contributor.riskFlags.isEmpty()}">
+            <h4>Contribution findings</h4>
+            <ul class="risk-list">
+                <li th:each="riskFlag : ${contributor.riskFlags}" th:text="${riskFlag}">Contribution finding.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="commit-group" th:if="${!contributor.commitAnalyses.isEmpty()}">
+        <h3 class="commit-group-title" th:text="'Commit evidence - ' + ${contributor.name}">Commit evidence</h3>
+        <div class="commit" th:each="commit : ${contributor.commitAnalyses}">
+            <p class="commit-meta">
+                <span class="commit-hash" th:text="${#strings.substring(commit.hash, 0, 7)}">3c9de44</span>
+                <span th:text="' | ' + ${commit.category.displayName()} + ' | Importance ' + ${commit.importance} + '/5'"> | Functional | Importance 4/5</span>
+            </p>
+            <p><strong th:text="${commit.message}">Commit message</strong></p>
+            <p class="muted" th:text="${commit.explanation}">Commit explanation.</p>
+        </div>
+    </div>
+</div>
+
+<h2>Final assessment</h2>
+<div class="assessment">
+    <h3>Final contribution assessment</h3>
+    <p th:text="${report.analysis.conclusion}">Final assessment.</p>
+
+    <div th:if="${!report.analysis.teamIndicators.isEmpty()}">
+        <h4>Team indicators</h4>
+        <div class="indicator" th:each="indicator : ${report.analysis.teamIndicators}">
+            <span class="indicator-severity" th:text="${indicator.severity.displayName()}">Warning</span>
+            <strong th:text="${indicator.title}">Indicator title</strong>
+            <p class="muted" th:text="${indicator.explanation}">Indicator explanation.</p>
+        </div>
+    </div>
+
+    <h3>Methodology</h3>
+    <p th:text="${report.analysis.methodology}">Methodology.</p>
+</div>
+
+<p class="disclaimer"><strong>Disclaimer.</strong> This report is based on Git data and should be used as supporting evidence, not as the sole assessment. Git activity does not capture design, review, pairing, or mentoring that happens off the repository.</p>
+</body>
+</html>

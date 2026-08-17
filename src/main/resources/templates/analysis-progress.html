@@ -3,47 +3,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f4f7fb">
     <title>Analysis progress · Git Contribution AI</title>
-    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" th:href="@{/css/style.css(v='25.9')}">
 </head>
 <body class="progress-body">
-<main class="progress-shell">
-    <section class="analysis-progress-card"
+<header class="site-header site-header--quiet">
+    <div class="site-header__inner site-header__inner--compact">
+        <a class="site-brand" th:href="@{/}" aria-label="Git Contribution AI home">
+            <span class="site-brand__mark" aria-hidden="true"><i class="bi bi-bezier2"></i></span>
+            <span class="site-brand__name">Git Contribution <span>AI</span></span>
+        </a>
+    </div>
+</header>
+
+<main class="progress-page">
+    <section class="progress-experience"
              data-analysis-progress
-             th:attr="data-status-url=@{/api/analyses/{id}(id=${job.id})}">
-        <span class="badge">Live analysis</span>
-        <p class="progress-kicker">You can keep this page open</p>
-        <h1>Contribution analysis in progress</h1>
-        <p class="lead">The indicator advances when the server reaches a real analysis stage.</p>
+             th:classappend="${presentationJob.status.name() == 'FAILED' ? ' is-failed' : (presentationJob.status.name() == 'COMPLETED' ? ' is-complete' : '')}"
+             th:attr="data-status-url=@{/api/analyses/{id}(id=${job.id})},data-current-stage=${job.stage.name()},data-initial-status=${job.status.name()},data-replay-from-start=${replayFromStart},data-report-url=${jobStatus.reportUrl}">
+        <div id="previewBadge" class="preview-badge" hidden>Preview</div>
 
-        <div class="progress-summary">
-            <strong id="progressPercent" th:text="${job.progress} + '%'">0%</strong>
-            <span id="progressStage" th:text="${job.stage.label}">Queued</span>
+        <div id="connectionState" class="connection-state" aria-live="polite">
+            <i class="connection-state__normal bi bi-arrow-clockwise" aria-hidden="true"></i>
+            <i class="connection-state__complete bi bi-check-circle" aria-hidden="true"></i>
+            <i class="connection-state__reconnect bi bi-wifi-off" aria-hidden="true"></i>
+            <i class="connection-state__failure bi bi-exclamation-circle" aria-hidden="true"></i>
+            <span id="connectionStatus"
+                  th:text="${presentationJob.status.name() == 'FAILED' ? 'Analysis stopped' : (presentationJob.status.name() == 'COMPLETED' ? 'Analysis complete' : (presentationJob.stage.name() == 'QUEUED' ? 'Queued for analysis' : 'Analyzing repository'))}">Queued for analysis</span>
         </div>
 
-        <div id="analysisProgressBar"
-             class="analysis-progress-track"
-             role="progressbar"
-             aria-label="Analysis completion"
-             aria-valuemin="0"
-             aria-valuemax="100"
-             th:attr="aria-valuenow=${job.progress}"
-             aria-describedby="progressMessage">
-            <span id="progressFill" th:style="'width: ' + ${job.progress} + '%'"> </span>
-        </div>
+        <p id="repositoryLabel" class="progress-repository" th:text="${job.repositoryLabel}">orbital-labs/flightdeck</p>
 
-        <p id="progressMessage" class="progress-message" aria-live="polite"
-           th:text="${jobStatus.message}">Your analysis is queued.</p>
-
-        <div id="progressFailure" class="progress-failure"
-             th:hidden="${job.status.name() != 'FAILED'}">
-            <strong>The analysis stopped before a report could be created.</strong>
-            <p>Review the message above, then try the request again.</p>
-            <div class="progress-actions">
-                <a class="primary-link" th:href="@{/}">Start another analysis</a>
-                <button class="secondary-action" type="button" onclick="window.location.reload()">Check again</button>
+        <div id="progressRing" class="progress-ring" th:style="|--progress-stop: ${presentationJob.progress}%|"
+             role="progressbar" aria-label="Analysis completion" aria-valuemin="0" aria-valuemax="100"
+             th:attr="aria-valuenow=${presentationJob.progress}" aria-describedby="progressMessage">
+            <div class="progress-ring__inner">
+                <div class="progress-ring__value"><strong id="progressPercent" th:text="${presentationJob.progress}">0</strong><span>%</span></div>
             </div>
         </div>
+
+        <div class="progress-copy">
+            <h1 id="progressStage" th:text="${presentationJob.stage.label}">Queued</h1>
+            <p id="progressMessage" aria-live="polite" th:text="${presentationJobStatus.message}">
+                Your repository analysis is waiting to start.
+            </p>
+        </div>
+
+        <section class="analysis-pipeline" aria-labelledby="analysisPipelineTitle">
+            <header class="analysis-pipeline__header">
+                <h2 id="analysisPipelineTitle">Analysis pipeline</h2>
+                <p><span id="pipelineStageNumber"
+                         th:text="${presentationJob.stage.ordinal() + 1}">1</span>/9</p>
+            </header>
+
+            <ol class="stage-list" aria-label="Analysis stages">
+                <li th:each="stage : ${analysisStages}"
+                    th:with="stageState=${presentationJobStatus.stageStates.get(stage)}"
+                    th:attr="data-stage-name=${stage.name()},data-stage-progress=${stage.progress()},data-stage-label=${stage.label},data-stage-message=${stage.message},data-stage-state=${stageState.name()},aria-current=${stageState.name() == 'ACTIVE' ? 'step' : null}"
+                    th:classappend="${(stage.name() == 'COMPLETED' ? ' stage-list__completion' : '') + (stageState.name() == 'COMPLETE' ? ' is-complete' : (stageState.name() == 'ACTIVE' ? ' is-current' : (stageState.name() == 'SKIPPED' ? ' is-skipped' : '')))}">
+                    <span class="stage-status" aria-hidden="true">
+                        <i class="stage-status__check bi bi-check-lg"></i>
+                        <i class="stage-status__current bi bi-circle-fill"></i>
+                        <i class="stage-status__skipped bi bi-dash-lg"></i>
+                        <i class="stage-status__reconnect bi bi-wifi"></i>
+                        <i class="stage-status__failure bi bi-exclamation-lg"></i>
+                    </span>
+                    <span class="stage-label" th:text="${stage.label}">Queued</span>
+                    <span class="stage-badges" aria-hidden="true">
+                        <span class="stage-badge stage-badge--ai"
+                              th:if="${stage.name() == 'ANALYZING_WITH_GEMINI'}">AI</span>
+                        <span class="stage-badge stage-badge--fallback"
+                              th:if="${stage.name() == 'LOCAL_FALLBACK'}">Fallback</span>
+                        <span class="stage-badge stage-badge--running">running</span>
+                    </span>
+                    <span class="visually-hidden stage-state-label"
+                          th:text="${stageState.name() == 'COMPLETE' ? 'Complete' : (stageState.name() == 'ACTIVE' ? 'Active' : (stageState.name() == 'SKIPPED' ? 'Skipped' : 'Pending'))}">Pending</span>
+                </li>
+            </ol>
+
+            <p class="progress-footnote">
+                <i class="bi bi-info-circle" aria-hidden="true"></i>
+                <span><strong>Progress is based on completed work.</strong> Each step advances only when its analysis
+                    finishes. If Gemini is unavailable, the local fallback continues automatically.</span>
+            </p>
+        </section>
+
+        <div id="progressFailure" class="progress-failure" th:hidden="${presentationJob.status.name() != 'FAILED'}" role="alert">
+            <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+            <div>
+                <strong>The analysis stopped before a report could be created.</strong>
+                <p>Review the message above, then try the request again.</p>
+                <div class="progress-actions">
+                    <a class="primary-link" th:href="@{/}">Start another analysis</a>
+                    <button class="secondary-action" type="button" onclick="window.location.reload()">Check again</button>
+                </div>
+            </div>
+        </div>
+
+        <nav class="progress-preview" aria-label="Preview analysis states"
+             th:if="${previewMode == true and previewChrome == true}">
+            <span>Preview states:</span>
+            <button type="button" data-progress-preview="failure" aria-pressed="false">Analysis failure</button>
+            <button type="button" data-progress-preview="missing" aria-pressed="false">Missing / expired</button>
+            <button type="button" data-progress-preview="restart"
+                    th:attr="aria-pressed=${previewMode == true}"
+                    th:classappend="${previewMode == true ? 'is-selected' : ''}">Restart progress</button>
+        </nav>
 
         <noscript>
             <div class="progress-noscript">
@@ -52,6 +120,7 @@
         </noscript>
     </section>
 </main>
-<script th:src="@{/js/app.js}"></script>
+
+<script th:src="@{/js/app.js(v='25.9')}"></script>
 </body>
 </html>

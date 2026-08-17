@@ -28,14 +28,12 @@ public class InMemoryAnalysisJobRepository implements AnalysisJobRepository {
 
     @Override
     public Optional<AnalysisJob> update(UUID id, UnaryOperator<AnalysisJob> update) {
-        AtomicReference<AnalysisJob> updatedJob = new AtomicReference<>();
-        jobs.computeIfPresent(id, (ignored, currentJob) -> {
-            AnalysisJob nextJob = update.apply(currentJob);
-            updatedJob.set(nextJob);
-            return nextJob;
-        });
+        AnalysisJob updatedJob = jobs.computeIfPresent(
+                id,
+                (ignored, currentJob) -> update.apply(currentJob)
+        );
         evictOldestTerminalJobs();
-        return Optional.ofNullable(updatedJob.get());
+        return Optional.ofNullable(updatedJob);
     }
 
     private synchronized void evictOldestTerminalJobs() {

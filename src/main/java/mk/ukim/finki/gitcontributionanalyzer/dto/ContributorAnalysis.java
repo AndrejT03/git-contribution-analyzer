@@ -13,4 +13,22 @@ public record ContributorAnalysis(
         List<CommitAnalysis> commitAnalyses,
         List<String> riskFlags
 ) {
+    public int categoryCommitCount() {
+        return categorySummary.stream()
+                .mapToInt(CategorySummary::commitCount)
+                .sum();
+    }
+
+    public int featuredCommitCount() {
+        int limit = contributionLevel == ContributionLevel.HIGH ? 4 : 3;
+        return Math.min(commitAnalyses.size(), limit);
+    }
+
+    public List<CommitAnalysis> featuredCommitAnalyses() {
+        return commitAnalyses.subList(0, featuredCommitCount());
+    }
+
+    public List<CommitAnalysis> remainingCommitAnalyses() {
+        return commitAnalyses.subList(featuredCommitCount(), commitAnalyses.size());
+    }
 }

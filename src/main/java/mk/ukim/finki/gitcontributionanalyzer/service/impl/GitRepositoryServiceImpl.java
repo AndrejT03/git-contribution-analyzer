@@ -61,6 +61,10 @@ public class GitRepositoryServiceImpl implements GitRepositoryService {
     }
 
     public URI validateUrl(String repositoryUrl) {
+        if (repositoryUrl == null) {
+            throw new RepositoryException("The repository URL is invalid.");
+        }
+
         try {
             URI uri = new URI(repositoryUrl.trim());
             String host = uri.getHost();
@@ -79,13 +83,13 @@ public class GitRepositoryServiceImpl implements GitRepositoryService {
             }
 
             return uri;
-        } catch (URISyntaxException | NullPointerException exception) {
+        } catch (URISyntaxException exception) {
             throw new RepositoryException("The repository URL is invalid.");
         }
     }
 
     private void cloneRepository(String url, Path destination) {
-        runCommand(cloneCommand(url, destination), null,
+        runCommand(cloneCommand(url, destination),
                 "The repository could not be cloned. Check that it is public and available.");
     }
 
@@ -192,26 +196,19 @@ public class GitRepositoryServiceImpl implements GitRepositoryService {
         command.add("-C");
         command.add(repositoryDirectory.toString());
         command.addAll(arguments);
-        return runCommand(command, repositoryDirectory, errorMessage);
+        return runCommand(command, errorMessage);
     }
 
-    private String runCommand(List<String> command, Path directory, String errorMessage) {
+    private String runCommand(List<String> command, String errorMessage) {
         Path outputFile = null;
         try {
             outputFile = Files.createTempFile("git-command-", ".log");
             ProcessBuilder processBuilder = new ProcessBuilder(command)
                     .redirectErrorStream(true)
                     .redirectOutput(outputFile.toFile());
-            if (directory != null) {
-                processBuilder.directory(directory.toFile());
-            }
 
             Process process = processBuilder.start();
-            boolean finished = process.waitFor(settings.gitTimeoutSeconds(), TimeUnit.SECONDS);
-            if (!finished) {
-                process.destroyForcibly();
-                throw new RepositoryException("The Git operation timed out and was stopped.");
-            }
+            waitForCompletion(process);
 
             String output = Files.readString(outputFile, StandardCharsets.UTF_8);
             if (process.exitValue() != 0) {
@@ -220,9 +217,6 @@ public class GitRepositoryServiceImpl implements GitRepositoryService {
             return output;
         } catch (IOException exception) {
             throw new RepositoryException("Git is not available on this computer.", exception);
-        } catch (InterruptedException exception) {
-            Thread.currentThread().interrupt();
-            throw new RepositoryException("The Git operation was interrupted.", exception);
         } finally {
             if (outputFile != null) {
                 try {
@@ -274,10 +268,9 @@ public class GitRepositoryServiceImpl implements GitRepositoryService {
         return clean.length() <= 220 ? clean : clean.substring(0, 220) + "...";
     }
 
-    private String repositoryName(URI uri) {
-        String path = uri.getPath().replaceFirst("/$", "");
-        String name = path.substring(path.lastIndexOf('/') + 1);
-        return name.endsWith(".git") ? name.substring(0, name.length() - 4) : name;
+    String repositoryName(URI uri) {
+        String path = uri.getPath().replaceAll("^/+|/+$", "");
+        return path.endsWith(".git") ? path.substring(0, path.length() - 4) : path;
     }
 
     private void deleteDirectory(Path directory) {

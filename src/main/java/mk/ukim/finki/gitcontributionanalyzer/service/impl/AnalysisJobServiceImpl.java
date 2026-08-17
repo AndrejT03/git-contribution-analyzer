@@ -1,17 +1,21 @@
 package mk.ukim.finki.gitcontributionanalyzer.service.impl;
 import mk.ukim.finki.gitcontributionanalyzer.dto.AnalysisRequest;
+import mk.ukim.finki.gitcontributionanalyzer.enums.AnalysisSource;
 import mk.ukim.finki.gitcontributionanalyzer.enums.AnalysisStage;
 import mk.ukim.finki.gitcontributionanalyzer.exception.RepositoryException;
 import mk.ukim.finki.gitcontributionanalyzer.model.AnalysisJob;
 import mk.ukim.finki.gitcontributionanalyzer.model.AnalysisReport;
 import mk.ukim.finki.gitcontributionanalyzer.repository.AnalysisJobRepository;
 import mk.ukim.finki.gitcontributionanalyzer.service.AnalysisJobService;
+import mk.ukim.finki.gitcontributionanalyzer.service.AnalysisProgressListener;
 import mk.ukim.finki.gitcontributionanalyzer.service.ReportService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.task.TaskRejectedException;
 import org.springframework.stereotype.Service;
+
+import java.net.URI;
 import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -44,7 +48,11 @@ public class AnalysisJobServiceImpl implements AnalysisJobService {
     public AnalysisJob startAnalysis(AnalysisRequest request) {
         AnalysisRequest requestCopy = copyOf(request);
         OffsetDateTime now = OffsetDateTime.now();
-        AnalysisJob queuedJob = AnalysisJob.queued(UUID.randomUUID(), now);
+        AnalysisJob queuedJob = AnalysisJob.queued(
+                UUID.randomUUID(),
+                repositoryLabel(requestCopy.getRepositoryUrl()),
+                now
+        );
         jobRepository.save(queuedJob);
 
         try {
@@ -72,11 +80,11 @@ public class AnalysisJobServiceImpl implements AnalysisJobService {
         try {
             AnalysisReport report = reportService.createReport(
                     request,
-                    stage -> updateStage(jobId, stage)
+                    progressListener(jobId)
             );
             jobRepository.update(
                     jobId,
-                    job -> job.complete(report.id(), OffsetDateTime.now())
+                    job -> job.complete(report.id(), report.analysisSource(), OffsetDateTime.now())
             );
         } catch (RuntimeException exception) {
             LOGGER.error("Analysis job {} failed.", jobId, exception);
@@ -97,11 +105,47 @@ public class AnalysisJobServiceImpl implements AnalysisJobService {
         );
     }
 
+    private void updateAnalysisSource(UUID jobId, AnalysisSource source) {
+        jobRepository.update(
+                jobId,
+                job -> job.selectAnalysisSource(source, OffsetDateTime.now())
+        );
+    }
+
+    private AnalysisProgressListener progressListener(UUID jobId) {
+        return new AnalysisProgressListener() {
+            @Override
+            public void onStage(AnalysisStage stage) {
+                updateStage(jobId, stage);
+            }
+
+            @Override
+            public void onAnalysisSource(AnalysisSource source) {
+                updateAnalysisSource(jobId, source);
+            }
+        };
+    }
+
     private AnalysisRequest copyOf(AnalysisRequest source) {
         AnalysisRequest copy = new AnalysisRequest();
         copy.setRepositoryUrl(source.getRepositoryUrl());
         copy.setProjectDescription(source.getProjectDescription());
         copy.setEmail(source.getEmail());
         return copy;
+    }
+
+    private String repositoryLabel(String repositoryUrl) {
+        try {
+            String path = URI.create(repositoryUrl).getPath();
+            if (path == null || path.isBlank() || "/".equals(path)) {
+                return "Repository analysis";
+            }
+            return path
+                    .replaceFirst("^/", "")
+                    .replaceFirst("/$", "")
+                    .replaceFirst("\\.git$", "");
+        } catch (IllegalArgumentException exception) {
+            return "Repository analysis";
+        }
     }
 }

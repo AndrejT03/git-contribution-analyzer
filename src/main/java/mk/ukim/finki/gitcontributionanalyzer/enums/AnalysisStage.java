@@ -9,42 +9,42 @@ public enum AnalysisStage {
     STARTING(
             5,
             "Starting analysis",
-            "The analysis worker is preparing your request."
+            "Preparing your request and reserving analysis resources."
     ),
     READING_REPOSITORY(
             10,
             "Reading Git history",
-            "The repository is being downloaded and its commit history is being read."
+            "Cloning history and collecting commits, authors, and diffs."
     ),
     ANALYZING_WITH_GEMINI(
             55,
             "Analyzing with Gemini",
-            "Gemini is evaluating the commits against the supplied project goal."
+            "Classifying commits and assessing their alignment with the project goal."
     ),
     LOCAL_FALLBACK(
             70,
             "Running local fallback",
-            "Gemini was unavailable, so the built-in local analyzer is evaluating the commits."
+            "Gemini is unavailable, so the deterministic local analyzer is continuing."
     ),
     PREPARING_REPORT(
-            82,
+            84,
             "Preparing report",
-            "The contribution findings are being organized into the final report."
+            "Composing charts, summaries, and highlights."
     ),
     SAVING_REPORT(
-            88,
+            89,
             "Saving report",
-            "The completed report is being made available in this browser."
+            "Making the completed report available in this browser."
     ),
     DELIVERING_EMAIL(
-            94,
+            95,
             "Delivering email copy",
-            "The optional email delivery step is being completed."
+            "Attempting to deliver the optional email copy."
     ),
     COMPLETED(
             100,
-            "Analysis completed",
-            "The complete report is ready."
+            "Completed",
+            "Your contribution report is ready."
     );
 
     private final int progress;
