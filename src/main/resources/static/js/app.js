@@ -1,3 +1,71 @@
+const reducedMotionPreference = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+const motionIsReduced = reducedMotionPreference?.matches ?? false;
+
+const initializeRevealAnimations = () => {
+    const loadTargets = Array.from(document.querySelectorAll("[data-reveal]"));
+    const scrollTargets = Array.from(document.querySelectorAll("[data-reveal-on-scroll]"));
+    const allTargets = [...new Set([...loadTargets, ...scrollTargets])];
+
+    if (allTargets.length === 0 || motionIsReduced || typeof window.IntersectionObserver !== "function") {
+        allTargets.forEach((target) => target.classList.add("is-revealed"));
+        return;
+    }
+
+    document.documentElement.classList.add("reveal-ready");
+    let observer;
+    const reveal = (target) => {
+        target.classList.add("is-revealed");
+        observer?.unobserve(target);
+    };
+
+    observer = new window.IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+                reveal(entry.target);
+            }
+        });
+    }, {
+        threshold: 0.12,
+        rootMargin: "0px 0px -8% 0px"
+    });
+
+    loadTargets.forEach((target) => {
+        window.requestAnimationFrame(() => reveal(target));
+    });
+    scrollTargets.forEach((target) => observer.observe(target));
+
+    document.addEventListener("focusin", (event) => {
+        const target = event.target.closest?.("[data-reveal], [data-reveal-on-scroll]");
+        if (target) {
+            reveal(target);
+        }
+    });
+
+    const revealHashTarget = () => {
+        if (!window.location.hash) {
+            return;
+        }
+
+        let targetId = window.location.hash.slice(1);
+        try {
+            targetId = decodeURIComponent(targetId);
+        } catch {
+            // Keep the raw fragment when it is not valid percent-encoded text.
+        }
+        const target = document.getElementById(targetId);
+        const revealTarget = target?.closest?.("[data-reveal], [data-reveal-on-scroll]")
+            ?? target?.querySelector?.("[data-reveal], [data-reveal-on-scroll]");
+        if (revealTarget) {
+            reveal(revealTarget);
+        }
+    };
+
+    window.addEventListener("hashchange", revealHashTarget);
+    revealHashTarget();
+};
+
+initializeRevealAnimations();
+
 const form = document.getElementById("analysisForm");
 const description = document.getElementById("projectDescription");
 const descriptionCounter = document.getElementById("descriptionCounter");
@@ -12,6 +80,30 @@ if (description && descriptionCounter) {
 }
 
 if (form) {
+    const controls = Array.from(form.querySelectorAll("input, textarea"));
+    const markInvalid = (control) => {
+        control.closest(".form-field")?.classList.add("form-field--invalid");
+        control.setAttribute("aria-invalid", "true");
+    };
+    const clearInvalidWhenValid = (control) => {
+        if (!control.validity.valid) {
+            return;
+        }
+
+        control.closest(".form-field")?.classList.remove("form-field--invalid");
+        control.setAttribute("aria-invalid", "false");
+    };
+
+    controls.forEach((control) => {
+        control.addEventListener("invalid", () => markInvalid(control));
+        control.addEventListener("input", () => clearInvalidWhenValid(control));
+        control.addEventListener("blur", () => {
+            if (!control.validity.valid) {
+                markInvalid(control);
+            }
+        });
+    });
+
     form.addEventListener("submit", () => {
         if (!form.checkValidity()) {
             return;
@@ -488,5 +580,9 @@ if (errorCard) {
         errorHeading.textContent = state.heading;
         errorDescription.textContent = state.description;
         document.title = `${status} · Git Contribution AI`;
+        if (!motionIsReduced) {
+            errorCard.classList.remove("is-state-refreshing");
+            window.requestAnimationFrame(() => errorCard.classList.add("is-state-refreshing"));
+        }
     }
 }

@@ -21,6 +21,12 @@
     --info-line: #bad7f8;
     --critical-surface: #fbe9eb;
     --critical-line: #f1b9bf;
+    --field-surface: #fbfbfd;
+    --field-border: #8e8e93;
+    --field-border-hover: #636366;
+    --field-placeholder: #707075;
+    --reveal-duration: 620ms;
+    --reveal-ease: cubic-bezier(0.22, 1, 0.36, 1);
     --page-content-width: 920px;
     --focused-content-width: 600px;
     --wide-page-content-width: 1200px;
@@ -101,7 +107,17 @@ button {
     border: 0 !important;
 }
 
-/* Shared header */
+.reveal-ready [data-reveal],
+.reveal-ready [data-reveal-on-scroll] {
+    opacity: 0;
+    translate: 0 var(--reveal-distance, 18px);
+}
+
+.reveal-ready [data-reveal].is-revealed,
+.reveal-ready [data-reveal-on-scroll].is-revealed {
+    animation: reveal-in var(--reveal-duration) var(--reveal-ease) var(--reveal-delay, 0ms) both;
+}
+
 .site-header {
     position: relative;
     z-index: 5;
@@ -172,7 +188,6 @@ button {
     color: var(--blue);
 }
 
-/* Landing */
 .home-body {
     background: var(--surface);
 }
@@ -309,10 +324,11 @@ button {
 
 .form-field label {
     display: block;
-    margin-bottom: 9px;
+    margin-bottom: 10px;
     color: #2c2c2e;
-    font-size: 13px;
-    font-weight: 650;
+    font-size: 14px;
+    font-weight: 680;
+    letter-spacing: -0.01em;
 }
 
 .field-label-row {
@@ -331,11 +347,14 @@ button {
 .form-field textarea {
     width: 100%;
     color: var(--ink);
-    border: 1px solid transparent;
+    border: 1px solid var(--field-border);
     border-radius: 10px;
     outline: none;
-    background: transparent;
-    transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+    background: var(--field-surface);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.035);
+    transition: border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .form-field input {
@@ -352,27 +371,79 @@ button {
 .form-field textarea {
     min-height: 126px;
     padding: 13px 14px;
-    resize: none;
+    resize: vertical;
     font-size: 15px;
     line-height: 1.45;
 }
 
 .form-field input:hover,
 .form-field textarea:hover {
-    background: #f7f7f9;
+    border-color: var(--field-border-hover);
+    background: #ffffff;
 }
 
 .form-field input:focus,
 .form-field textarea:focus {
     border-color: var(--blue);
     background: var(--surface);
-    box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.12);
+    box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.14),
+    inset 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
 .form-field input::placeholder,
 .form-field textarea::placeholder {
-    color: #2c2c2e;
+    color: var(--field-placeholder);
     opacity: 1;
+}
+
+.form-field input:-webkit-autofill,
+.form-field input:-webkit-autofill:hover {
+    -webkit-text-fill-color: var(--ink);
+    box-shadow: 0 0 0 1000px var(--field-surface) inset;
+}
+
+.form-field input:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--ink);
+    box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.14),
+    0 0 0 1000px var(--surface) inset;
+}
+
+.form-field--invalid label {
+    color: #a51d30;
+}
+
+.form-field--invalid input,
+.form-field--invalid textarea,
+.form-field input[aria-invalid="true"],
+.form-field textarea[aria-invalid="true"] {
+    border-color: var(--red);
+    background: #fff9fa;
+    box-shadow: 0 0 0 3px rgba(209, 41, 61, 0.09);
+}
+
+.form-field--invalid input:focus,
+.form-field--invalid textarea:focus,
+.form-field input[aria-invalid="true"]:focus,
+.form-field textarea[aria-invalid="true"]:focus {
+    border-color: var(--blue);
+    background: var(--surface);
+    box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.14);
+}
+
+@supports selector(input:user-invalid) {
+    .form-field input:user-invalid,
+    .form-field textarea:user-invalid {
+        border-color: var(--red);
+        background: #fff9fa;
+        box-shadow: 0 0 0 3px rgba(209, 41, 61, 0.09);
+    }
+
+    .form-field input:user-invalid:focus,
+    .form-field textarea:user-invalid:focus {
+        border-color: var(--blue);
+        background: var(--surface);
+        box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.14);
+    }
 }
 
 .field-hint,
@@ -389,6 +460,10 @@ button {
 
 .field-error {
     color: var(--red);
+}
+
+.field-error:empty {
+    display: none;
 }
 
 .primary-button,
@@ -524,7 +599,6 @@ button {
     font-size: 11px;
 }
 
-/* Submit feedback */
 .loading-overlay {
     position: fixed;
     inset: 0;
@@ -567,7 +641,6 @@ button {
     animation: spin 760ms linear infinite;
 }
 
-/* Progress */
 .progress-body {
     --progress-page: #f5f7fa;
     --progress-ink: #0d1220;
@@ -759,7 +832,7 @@ button {
 
 .analysis-pipeline {
     width: 100%;
-    margin: 40px auto 0;
+    margin: 56px auto 0;
     padding: 26px 28px 29px;
     text-align: left;
     border: 1px solid var(--progress-line);
@@ -1015,10 +1088,15 @@ button {
 }
 
 .progress-footnote > i {
-    flex: 0 0 auto;
-    margin-top: 2px;
+    width: 14px;
+    height: 20px;
+    flex: 0 0 14px;
+    margin-top: 0;
+    display: grid;
+    place-items: center;
     color: var(--progress-blue);
     font-size: 14px;
+    line-height: 1;
 }
 
 .progress-footnote strong {
@@ -1170,7 +1248,6 @@ button {
     box-shadow: 0 0 0 5px #fbe2e5;
 }
 
-/* Error */
 .error-page {
     min-height: calc(100vh - 53px);
     padding: 170px 24px 80px;
@@ -1267,7 +1344,6 @@ button {
     min-width: 48px;
 }
 
-/* Report */
 .report-body {
     background: var(--page);
 }
@@ -1541,7 +1617,7 @@ button {
 }
 
 .overview-card {
-    min-height: 250px;
+    min-height: 0;
     padding: 25px 24px 18px;
     border: 1px solid var(--line);
     border-radius: 20px;
@@ -1729,7 +1805,7 @@ button {
     margin: 9px 0 0;
     padding: 0;
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 8px;
     list-style: none;
 }
@@ -1740,6 +1816,7 @@ button {
     gap: 4px;
     color: var(--muted);
     font-size: 9px;
+    white-space: nowrap;
 }
 
 .category-key li {
@@ -2132,7 +2209,6 @@ button {
     line-height: 1.55;
 }
 
-/* Readability: keep supporting copy comfortably legible on every screen. */
 body {
     font-size: 17px;
     line-height: 1.5;
@@ -2319,6 +2395,65 @@ body {
     font-size: 12px;
 }
 
+.loading-overlay:not([hidden]) [data-state-reveal],
+.progress-failure:not([hidden])[data-state-reveal] {
+    animation: state-reveal 460ms var(--reveal-ease) both;
+}
+
+.error-card.is-state-refreshing > * {
+    animation: error-state-refresh 360ms var(--reveal-ease) both;
+}
+
+.commit-details[open] > .commit-list,
+.commit-supplementary[open] > :not(summary),
+.team-indicators[open] > ul {
+    animation: details-reveal 420ms var(--reveal-ease) both;
+}
+
+@keyframes reveal-in {
+    0% {
+        opacity: 0;
+        translate: 0 var(--reveal-distance, 18px);
+    }
+    100% {
+        opacity: 1;
+        translate: 0 0;
+    }
+}
+
+@keyframes state-reveal {
+    0% {
+        opacity: 0;
+        translate: 0 12px;
+    }
+    100% {
+        opacity: 1;
+        translate: 0 0;
+    }
+}
+
+@keyframes details-reveal {
+    0% {
+        opacity: 0;
+        translate: 0 -6px;
+    }
+    100% {
+        opacity: 1;
+        translate: 0 0;
+    }
+}
+
+@keyframes error-state-refresh {
+    0% {
+        opacity: 0.35;
+        translate: 0 5px;
+    }
+    100% {
+        opacity: 1;
+        translate: 0 0;
+    }
+}
+
 @keyframes progress-aura {
     0%, 100% {
         opacity: 0.16;
@@ -2419,9 +2554,15 @@ body {
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
     }
+
+    .reveal-ready [data-reveal],
+    .reveal-ready [data-reveal-on-scroll] {
+        opacity: 1 !important;
+        translate: none !important;
+        animation: none !important;
+    }
 }
 
-/* Keep every screen at the same wide-screen scale and content rhythm as the landing page. */
 @media screen and (min-width: 1600px) {
     body.home-body,
     body.progress-body,
@@ -2459,7 +2600,6 @@ body {
     }
 }
 
-/* Print */
 @media print {
     @page {
         margin: 15mm;
@@ -2469,6 +2609,14 @@ body {
     .progress-preview,
     .error-preview {
         display: none !important;
+    }
+
+    [data-reveal],
+    [data-reveal-on-scroll],
+    [data-state-reveal] {
+        opacity: 1 !important;
+        translate: none !important;
+        animation: none !important;
     }
 
     body,
@@ -2524,7 +2672,6 @@ body {
     }
 }
 
-/* Responsive */
 @media (max-width: 900px) {
     .report-meta {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2617,7 +2764,7 @@ body {
     }
 
     .analysis-pipeline {
-        margin-top: 34px;
+        margin-top: 42px;
         padding: 24px;
     }
 

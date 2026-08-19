@@ -7,11 +7,11 @@
   <title th:text="${status} + ' · Git Contribution AI'">Error · Git Contribution AI</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
-  <link rel="stylesheet" th:href="@{/css/style.css(v='25.9')}">
+  <link rel="stylesheet" th:href="@{/css/style.css(v='26.2')}">
 </head>
 <body class="error-body">
 <header class="site-header site-header--quiet">
-  <div class="site-header__inner site-header__inner--compact">
+  <div class="site-header__inner site-header__inner--compact" data-reveal>
     <a class="site-brand" th:href="@{/}" aria-label="Git Contribution AI home">
       <span class="site-brand__mark" aria-hidden="true"><i class="bi bi-bezier2"></i></span>
       <span class="site-brand__name">Git Contribution <span>AI</span></span>
@@ -20,7 +20,7 @@
 </header>
 
 <main class="error-page">
-  <section class="error-card" data-error-card aria-live="polite">
+  <section class="error-card" data-error-card data-reveal aria-live="polite" style="--reveal-delay: 80ms">
     <p class="error-code">Error <span data-error-status th:text="${status}">404</span></p>
     <div class="error-icon" aria-hidden="true">
             <span class="error-document-icon">
@@ -37,7 +37,8 @@
     </a>
   </section>
 
-  <nav class="error-preview" aria-label="Preview error states" th:if="${previewMode == true}">
+  <nav class="error-preview" aria-label="Preview error states" th:if="${previewMode == true}"
+       data-reveal-on-scroll>
     <span>Preview:</span>
     <button type="button" data-error-preview="400"
             th:attr="aria-pressed=${status == 400}"
@@ -51,6 +52,6 @@
   </nav>
 </main>
 
-<script th:src="@{/js/app.js(v='25.9')}"></script>
+<script th:src="@{/js/app.js(v='26.2')}"></script>
 </body>
 </html>

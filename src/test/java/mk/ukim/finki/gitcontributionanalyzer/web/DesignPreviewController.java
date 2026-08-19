@@ -109,8 +109,10 @@ public class DesignPreviewController {
     }
 
     @GetMapping("/__preview/report-scale")
-    public String reportScale(Model model) {
-        model.addAttribute("report", scalingReport());
+    public String reportScale(
+            @RequestParam(defaultValue = "false") boolean single,
+            Model model) {
+        model.addAttribute("report", single ? singleContributorReport() : scalingReport());
         model.addAttribute("newReport", false);
         model.addAttribute("commitCategories", CommitCategory.values());
         model.addAttribute("previewMode", false);
@@ -242,6 +244,34 @@ public class DesignPreviewController {
                 reference.analysisModel(),
                 reference.analysisNotice(),
                 200,
+                reference.generatedAt(),
+                analysis,
+                reference.emailDelivery()
+        );
+    }
+
+    private AnalysisReport singleContributorReport() {
+        AnalysisReport reference = previewReport();
+        ContributorAnalysis contributor = withPercentage(amara(), 100);
+        ContributionAnalysis analysis = new ContributionAnalysis(
+                reference.analysis().projectSummary(),
+                reference.analysis().goalAlignment(),
+                List.of(contributor),
+                List.of(),
+                "One contributor owns the full Git-visible contribution represented in this report.",
+                reference.analysis().methodology()
+        );
+        return new AnalysisReport(
+                UUID.fromString("c480458e-85ec-4e31-bbed-8bf5fd1bc028"),
+                reference.repositoryUrl(),
+                reference.repositoryName(),
+                reference.defaultBranch(),
+                reference.projectDescription(),
+                reference.requestedEmail(),
+                reference.analysisSource(),
+                reference.analysisModel(),
+                reference.analysisNotice(),
+                100,
                 reference.generatedAt(),
                 analysis,
                 reference.emailDelivery()

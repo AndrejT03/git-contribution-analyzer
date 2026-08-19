@@ -51,8 +51,10 @@ class AnalysisControllerTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Start analysis")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("How it works")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("descriptionCounter")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=25.9")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=25.9")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("data-reveal-on-scroll")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("aria-invalid=\"false\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=26.2")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=26.2")));
     }
 
     @Test
@@ -107,13 +109,17 @@ class AnalysisControllerTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("data-stage-name=\"COMPLETED\"")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Analyzing with Gemini")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "Progress is based on completed work."
+                        "Progress follows real work."
+                )))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "A stage is active while it runs"
                 )))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("id=\"progressStageNumber\"")
                 )))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=25.9")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=25.9")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("data-reveal-on-scroll")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=26.2")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=26.2")));
     }
 
     @Test
@@ -341,8 +347,8 @@ class AnalysisControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(view().name("error-page"))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("We couldn&#39;t process that request")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=25.9")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=25.9")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=26.2")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=26.2")))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("data-error-preview=\"400\""))));
     }
@@ -402,7 +408,9 @@ class AnalysisControllerTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "/reports/" + id + "/pdf?download=true"
                 )))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=25.9")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("data-reveal-on-scroll")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=26.2")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=26.2")));
     }
 
     @Test
