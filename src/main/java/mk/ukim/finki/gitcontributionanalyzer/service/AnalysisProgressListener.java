@@ -6,10 +6,5 @@ import mk.ukim.finki.gitcontributionanalyzer.enums.AnalysisStage;
 public interface AnalysisProgressListener {
     void onStage(AnalysisStage stage);
 
-    default void onAnalysisSource(AnalysisSource source) {
-    }
-
-    static AnalysisProgressListener none() {
-        return ignored -> { };
-    }
+    default void onAnalysisSource(AnalysisSource source) {}
 }

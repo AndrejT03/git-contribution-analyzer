@@ -152,7 +152,7 @@ class AnalysisJobServiceImplTest {
     }
 
     @Test
-    void copiesTheMutableWebRequestBeforeItIsQueued() {
+    void queuesTheImmutableRequestWithoutMakingADefensiveCopy() {
         InMemoryAnalysisJobRepository repository = new InMemoryAnalysisJobRepository();
         CapturingExecutor executor = new CapturingExecutor();
         AnalysisReport report = sampleReport(new EmailDelivery(EmailDeliveryStatus.SENT, "Sent."));
@@ -162,9 +162,6 @@ class AnalysisJobServiceImplTest {
 
         var queued = service.startAnalysis(request);
         assertThat(queued.repositoryLabel()).isEqualTo("team/project");
-        request.setRepositoryUrl("https://github.com/changed/after-queue");
-        request.setProjectDescription("This description was changed after the request was queued.");
-        request.setEmail("changed@example.com");
         executor.runTask();
 
         ArgumentCaptor<AnalysisRequest> requestCaptor = ArgumentCaptor.forClass(AnalysisRequest.class);
@@ -172,11 +169,7 @@ class AnalysisJobServiceImplTest {
                 requestCaptor.capture(),
                 any(AnalysisProgressListener.class)
         );
-        assertThat(requestCaptor.getValue().getRepositoryUrl())
-                .isEqualTo("https://github.com/team/project");
-        assertThat(requestCaptor.getValue().getProjectDescription())
-                .isEqualTo("A team planning application with shared tasks and progress tracking.");
-        assertThat(requestCaptor.getValue().getEmail()).isEqualTo("mentor@example.com");
+        assertThat(requestCaptor.getValue()).isSameAs(request);
         assertThat(service.findById(queued.id())).get()
                 .extracting(job -> job.status())
                 .isEqualTo(AnalysisJobStatus.COMPLETED);
@@ -290,13 +283,11 @@ class AnalysisJobServiceImplTest {
     }
 
     private AnalysisRequest validRequest() {
-        AnalysisRequest request = new AnalysisRequest();
-        request.setRepositoryUrl("https://github.com/team/project");
-        request.setProjectDescription(
-                "A team planning application with shared tasks and progress tracking."
+        return new AnalysisRequest(
+                "https://github.com/team/project",
+                "A team planning application with shared tasks and progress tracking.",
+                "mentor@example.com"
         );
-        request.setEmail("mentor@example.com");
-        return request;
     }
 
     private AnalysisReport sampleReport(EmailDelivery delivery) {

@@ -13,7 +13,6 @@ public record AnalysisJob(
         String repositoryLabel,
         AnalysisJobStatus status,
         AnalysisStage stage,
-        int progress,
         AnalysisSource analysisSource,
         List<AnalysisStage> stageHistory,
         UUID reportId,
@@ -21,6 +20,7 @@ public record AnalysisJob(
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt
 ) {
+
     public AnalysisJob {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(repositoryLabel, "repositoryLabel");
@@ -29,38 +29,10 @@ public record AnalysisJob(
         Objects.requireNonNull(stageHistory, "stageHistory");
         Objects.requireNonNull(createdAt, "createdAt");
         Objects.requireNonNull(updatedAt, "updatedAt");
-        if (progress < 0 || progress > 100) {
-            throw new IllegalArgumentException("Progress must be between 0 and 100.");
-        }
         if (stageHistory.isEmpty() || !stageHistory.contains(stage)) {
             throw new IllegalArgumentException("Stage history must contain the current stage.");
         }
         stageHistory = List.copyOf(stageHistory);
-    }
-
-    public AnalysisJob(
-            UUID id,
-            String repositoryLabel,
-            AnalysisJobStatus status,
-            AnalysisStage stage,
-            int progress,
-            UUID reportId,
-            String errorMessage,
-            OffsetDateTime createdAt,
-            OffsetDateTime updatedAt) {
-        this(
-                id,
-                repositoryLabel,
-                status,
-                stage,
-                progress,
-                null,
-                List.of(stage),
-                reportId,
-                errorMessage,
-                createdAt,
-                updatedAt
-        );
     }
 
     public static AnalysisJob queued(UUID id, OffsetDateTime now) {
@@ -73,7 +45,6 @@ public record AnalysisJob(
                 repositoryLabel,
                 AnalysisJobStatus.QUEUED,
                 AnalysisStage.QUEUED,
-                AnalysisStage.QUEUED.progress(),
                 null,
                 List.of(AnalysisStage.QUEUED),
                 null,
@@ -88,7 +59,7 @@ public record AnalysisJob(
         if (isTerminal()
                 || nextStage == AnalysisStage.COMPLETED
                 || nextStage == stage
-                || nextStage.progress() < progress) {
+                || nextStage.progress() < progress()) {
             return this;
         }
 
@@ -97,7 +68,6 @@ public record AnalysisJob(
                 repositoryLabel,
                 AnalysisJobStatus.RUNNING,
                 nextStage,
-                nextStage.progress(),
                 nextStage == AnalysisStage.LOCAL_FALLBACK
                         ? AnalysisSource.LOCAL_FALLBACK
                         : analysisSource,
@@ -120,7 +90,6 @@ public record AnalysisJob(
                 repositoryLabel,
                 status,
                 stage,
-                progress,
                 selectedSource,
                 stageHistory,
                 reportId,
@@ -148,7 +117,6 @@ public record AnalysisJob(
                 repositoryLabel,
                 AnalysisJobStatus.COMPLETED,
                 AnalysisStage.COMPLETED,
-                AnalysisStage.COMPLETED.progress(),
                 completedAnalysisSource,
                 appendStage(AnalysisStage.COMPLETED),
                 completedReportId,
@@ -171,7 +139,6 @@ public record AnalysisJob(
                 repositoryLabel,
                 AnalysisJobStatus.FAILED,
                 stage,
-                progress,
                 analysisSource,
                 stageHistory,
                 null,
@@ -183,6 +150,10 @@ public record AnalysisJob(
 
     public boolean isTerminal() {
         return status == AnalysisJobStatus.COMPLETED || status == AnalysisJobStatus.FAILED;
+    }
+
+    public int progress() {
+        return stage.progress();
     }
 
     private List<AnalysisStage> appendStage(AnalysisStage nextStage) {

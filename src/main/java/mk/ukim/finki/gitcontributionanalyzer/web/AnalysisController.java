@@ -1,4 +1,5 @@
 package mk.ukim.finki.gitcontributionanalyzer.web;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import mk.ukim.finki.gitcontributionanalyzer.dto.AnalysisJobStatusDto;
 import mk.ukim.finki.gitcontributionanalyzer.enums.AnalysisStage;
@@ -18,6 +19,10 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.view.json.JacksonJsonView;
+
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.UUID;
@@ -27,11 +32,14 @@ public class AnalysisController {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AnalysisController.class);
 
-    public final ReportService reportService;
+    private final ReportService reportService;
     private final AnalysisJobService analysisJobService;
     private final ReportPdfService reportPdfService;
 
-    public AnalysisController(ReportService reportService, AnalysisJobService analysisJobService, ReportPdfService reportPdfService) {
+    public AnalysisController(
+            ReportService reportService,
+            AnalysisJobService analysisJobService,
+            ReportPdfService reportPdfService) {
         this.reportService = reportService;
         this.analysisJobService = analysisJobService;
         this.reportPdfService = reportPdfService;
@@ -39,7 +47,7 @@ public class AnalysisController {
 
     @GetMapping("/")
     public String home(Model model) {
-        model.addAttribute("analysisRequest", new AnalysisRequest());
+        model.addAttribute("analysisRequest", AnalysisRequest.empty());
         return "index";
     }
 
@@ -64,24 +72,20 @@ public class AnalysisController {
 
     @GetMapping("/analyses/{id}")
     public String showAnalysisProgress(
-            @PathVariable String id,
-            @RequestParam(name = "newAnalysis", defaultValue = "false") String newAnalysisValue,
+            @PathVariable UUID id,
+            @RequestParam(name = "newAnalysis", defaultValue = "false") boolean replayFromStart,
             Model model,
             HttpServletResponse response) {
-        UUID jobId;
-        boolean replayFromStart;
         try {
-            jobId = UUID.fromString(id);
-            replayFromStart = parseBoolean(newAnalysisValue);
-        } catch (IllegalArgumentException exception) {
-            return invalidRequest(model, response);
-        }
-
-        try {
-            AnalysisJob job = analysisJobService.findById(jobId)
-                    .orElseThrow(() -> new AnalysisJobNotFoundException(
-                            "The analysis was not found, or the application was restarted."
-                    ));
+            AnalysisJob job = analysisJobService.findById(id).orElse(null);
+            if (job == null) {
+                return errorPage(
+                        model,
+                        response,
+                        HttpStatus.NOT_FOUND,
+                        "The analysis was not found, or the application was restarted."
+                );
+            }
             AnalysisJob presentationJob = replayFromStart
                     ? AnalysisJob.queued(job.id(), job.repositoryLabel(), job.createdAt())
                     : job;
@@ -92,14 +96,6 @@ public class AnalysisController {
             model.addAttribute("replayFromStart", replayFromStart);
             model.addAttribute("analysisStages", AnalysisStage.values());
             return "analysis-progress";
-        } catch (AnalysisJobNotFoundException exception) {
-            return errorPage(
-                    model,
-                    response,
-                    HttpStatus.NOT_FOUND,
-                    "Analysis not found",
-                    exception.getMessage()
-            );
         } catch (Exception exception) {
             return unexpectedError(exception, model, response);
         }
@@ -107,15 +103,8 @@ public class AnalysisController {
 
     @GetMapping("/api/analyses/{id}")
     @ResponseBody
-    public ResponseEntity<?> getAnalysisStatus(@PathVariable String id) {
-        UUID jobId;
-        try {
-            jobId = UUID.fromString(id);
-        } catch (IllegalArgumentException exception) {
-            return missingAnalysisStatus();
-        }
-
-        return analysisJobService.findById(jobId)
+    public ResponseEntity<?> getAnalysisStatus(@PathVariable UUID id) {
+        return analysisJobService.findById(id)
                 .<ResponseEntity<?>>map(job -> ResponseEntity.ok()
                         .cacheControl(CacheControl.noStore())
                         .body(AnalysisJobStatusDto.from(job)))
@@ -124,26 +113,17 @@ public class AnalysisController {
 
     @GetMapping("/reports/{id}")
     public String showReport(
-            @PathVariable String id,
-            @RequestParam(name = "newReport", defaultValue = "false") String newReportValue,
+            @PathVariable UUID id,
+            @RequestParam(name = "newReport", defaultValue = "false") boolean newReport,
             Model model,
             HttpServletResponse response) {
-        UUID reportId;
-        boolean newReport;
         try {
-            reportId = UUID.fromString(id);
-            newReport = parseBoolean(newReportValue);
-        } catch (IllegalArgumentException exception) {
-            return invalidRequest(model, response);
-        }
-
-        try {
-            AnalysisReport report = reportService.getReport(reportId);
+            AnalysisReport report = reportService.getReport(id);
             model.addAttribute("report", report);
             model.addAttribute("newReport", newReport);
             model.addAttribute("commitCategories", CommitCategory.values());
             model.addAttribute("previewMode", false);
-            String reportPdfUrl = "/reports/" + reportId + "/pdf";
+            String reportPdfUrl = "/reports/" + id + "/pdf";
             model.addAttribute("reportPdfUrl", reportPdfUrl);
             model.addAttribute("reportPdfDownloadUrl", reportPdfUrl + "?download=true");
             return "report";
@@ -152,7 +132,6 @@ public class AnalysisController {
                     model,
                     response,
                     HttpStatus.NOT_FOUND,
-                    "Report not found",
                     exception.getMessage()
             );
         } catch (Exception exception) {
@@ -163,19 +142,10 @@ public class AnalysisController {
     @GetMapping("/reports/{id}/pdf")
     @ResponseBody
     public ResponseEntity<?> showReportPdf(
-            @PathVariable String id,
-            @RequestParam(name = "download", defaultValue = "false") String downloadValue) {
-        UUID reportId;
-        boolean download;
+            @PathVariable UUID id,
+            @RequestParam(name = "download", defaultValue = "false") boolean download) {
         try {
-            reportId = UUID.fromString(id);
-            download = parseBoolean(downloadValue);
-        } catch (IllegalArgumentException exception) {
-            return pdfError(HttpStatus.BAD_REQUEST, "The requested PDF address contains an invalid value.");
-        }
-
-        try {
-            AnalysisReport report = reportService.getReport(reportId);
+            AnalysisReport report = reportService.getReport(id);
             byte[] pdf = reportPdfService.createPdf(report);
             ContentDisposition disposition = (download
                     ? ContentDisposition.attachment()
@@ -225,63 +195,80 @@ public class AnalysisController {
         return safeName + "-contribution-report.pdf";
     }
 
-    private boolean parseBoolean(String value) {
-        if ("true".equalsIgnoreCase(value)
-                || "on".equalsIgnoreCase(value)
-                || "yes".equalsIgnoreCase(value)
-                || "1".equals(value)) {
-            return true;
-        }
-        if ("false".equalsIgnoreCase(value)
-                || "off".equalsIgnoreCase(value)
-                || "no".equalsIgnoreCase(value)
-                || "0".equals(value)) {
-            return false;
-        }
-        throw new IllegalArgumentException("Invalid boolean value.");
-    }
-
-    private String invalidRequest(Model model, HttpServletResponse response) {
-        return errorPage(
-                model,
-                response,
-                HttpStatus.BAD_REQUEST,
-                "Invalid request",
-                "The requested address contains an invalid value."
-        );
-    }
-
     private String unexpectedError(Exception exception, Model model, HttpServletResponse response) {
         LOGGER.error("Unexpected error while processing the request", exception);
         return errorPage(
                 model,
                 response,
                 HttpStatus.INTERNAL_SERVER_ERROR,
-                "An unexpected error occurred",
                 "Try again. If the problem continues, check the application terminal."
         );
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ModelAndView handleInvalidRouteValue(
+            HttpServletRequest request,
+            HttpServletResponse response) {
+        String path = request.getRequestURI();
+        if (path.startsWith("/api/analyses/")) {
+            return jsonErrorView(response, HttpStatus.NOT_FOUND, "Analysis not found.", false);
+        }
+        if (path.endsWith("/pdf")) {
+            return jsonErrorView(
+                    response,
+                    HttpStatus.BAD_REQUEST,
+                    "The requested PDF address contains an invalid value.",
+                    true
+            );
+        }
+        return new ModelAndView(
+                "error-page",
+                errorAttributes(HttpStatus.BAD_REQUEST, "The requested address contains an invalid value."),
+                HttpStatus.BAD_REQUEST
+        );
+    }
+
+    private ModelAndView jsonErrorView(
+            HttpServletResponse response,
+            HttpStatus status,
+            String message,
+            boolean preventContentTypeSniffing) {
+        if (preventContentTypeSniffing) {
+            response.setHeader("X-Content-Type-Options", "nosniff");
+        }
+
+        ModelAndView result = new ModelAndView(
+                new JacksonJsonView(),
+                Map.of("error", message)
+        );
+        result.setStatus(status);
+        return result;
     }
 
     private String errorPage(
             Model model,
             HttpServletResponse response,
             HttpStatus status,
-            String title,
             String message) {
         response.setStatus(status.value());
-        model.addAttribute("status", status.value());
-        model.addAttribute("title", title);
-        model.addAttribute("message", message);
-        model.addAttribute("errorHeading", switch (status) {
+        model.addAllAttributes(errorAttributes(status, message));
+        return "error-page";
+    }
+
+    private Map<String, Object> errorAttributes(HttpStatus status, String message) {
+        String heading = switch (status) {
             case BAD_REQUEST -> "We couldn't process that request";
             case NOT_FOUND -> "We couldn't find that analysis";
             default -> "Something went wrong";
-        });
-        model.addAttribute("errorDescription", switch (status) {
-            case NOT_FOUND -> "The analysis or report you're looking for doesn't exist or is no longer available. "
-                    + "Reports are kept only for the current session and are not stored.";
-            default -> message;
-        });
-        return "error-page";
+        };
+        String description = status == HttpStatus.NOT_FOUND
+                ? "The analysis or report you're looking for doesn't exist or is no longer available. "
+                + "Reports are kept only for the current session and are not stored."
+                : message;
+        return Map.of(
+                "status", status.value(),
+                "errorHeading", heading,
+                "errorDescription", description
+        );
     }
 }

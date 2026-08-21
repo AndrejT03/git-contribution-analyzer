@@ -46,17 +46,16 @@ public class AnalysisJobServiceImpl implements AnalysisJobService {
 
     @Override
     public AnalysisJob startAnalysis(AnalysisRequest request) {
-        AnalysisRequest requestCopy = copyOf(request);
         OffsetDateTime now = OffsetDateTime.now();
         AnalysisJob queuedJob = AnalysisJob.queued(
                 UUID.randomUUID(),
-                repositoryLabel(requestCopy.getRepositoryUrl()),
+                repositoryLabel(request.repositoryUrl()),
                 now
         );
         jobRepository.save(queuedJob);
 
         try {
-            taskExecutor.execute(() -> runAnalysis(queuedJob.id(), requestCopy));
+            taskExecutor.execute(() -> runAnalysis(queuedJob.id(), request));
         } catch (TaskRejectedException exception) {
             LOGGER.warn("Analysis job {} was rejected because the worker queue is full.", queuedJob.id());
             return jobRepository.update(
@@ -124,14 +123,6 @@ public class AnalysisJobServiceImpl implements AnalysisJobService {
                 updateAnalysisSource(jobId, source);
             }
         };
-    }
-
-    private AnalysisRequest copyOf(AnalysisRequest source) {
-        AnalysisRequest copy = new AnalysisRequest();
-        copy.setRepositoryUrl(source.getRepositoryUrl());
-        copy.setProjectDescription(source.getProjectDescription());
-        copy.setEmail(source.getEmail());
-        return copy;
     }
 
     private String repositoryLabel(String repositoryUrl) {

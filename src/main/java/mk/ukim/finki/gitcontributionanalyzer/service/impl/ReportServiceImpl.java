@@ -45,18 +45,13 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Override
-    public AnalysisReport createReport(AnalysisRequest request) {
-        return createReport(request, AnalysisProgressListener.none());
-    }
-
-    @Override
     public AnalysisReport createReport(
             AnalysisRequest request,
             AnalysisProgressListener progressListener) {
         Objects.requireNonNull(progressListener, "progressListener");
 
         progressListener.onStage(READING_REPOSITORY);
-        RepositoryData repository = gitRepositoryService.readRepository(request.getRepositoryUrl());
+        RepositoryData repository = gitRepositoryService.readRepository(request.repositoryUrl());
         AnalysisOutcome outcome = analyzeWithFallback(request, repository, progressListener);
 
         progressListener.onStage(PREPARING_REPORT);
@@ -78,7 +73,7 @@ public class ReportServiceImpl implements ReportService {
         try {
             progressListener.onStage(ANALYZING_WITH_GEMINI);
             ContributionAnalysis analysis = geminiAnalysisService.analyze(
-                    request.getProjectDescription(),
+                    request.projectDescription(),
                     repository
             );
             progressListener.onAnalysisSource(AnalysisSource.GEMINI);
@@ -97,7 +92,7 @@ public class ReportServiceImpl implements ReportService {
             progressListener.onStage(LOCAL_FALLBACK);
             progressListener.onAnalysisSource(AnalysisSource.LOCAL_FALLBACK);
             ContributionAnalysis analysis = localAnalysisService.analyze(
-                    request.getProjectDescription(),
+                    request.projectDescription(),
                     repository
             );
             return new AnalysisOutcome(
@@ -119,8 +114,8 @@ public class ReportServiceImpl implements ReportService {
                 repository.url(),
                 repository.name(),
                 repository.defaultBranch(),
-                request.getProjectDescription(),
-                request.getEmail(),
+                request.projectDescription(),
+                request.email(),
                 outcome.source(),
                 outcome.model(),
                 outcome.notice(),

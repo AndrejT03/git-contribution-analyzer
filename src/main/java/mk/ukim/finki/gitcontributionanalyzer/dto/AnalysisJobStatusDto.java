@@ -44,11 +44,7 @@ public record AnalysisJobStatusDto(
 
     private static Map<AnalysisStage, AnalysisStageState> stageStates(AnalysisJob job) {
         EnumMap<AnalysisStage, AnalysisStageState> states = new EnumMap<>(AnalysisStage.class);
-        AnalysisSource effectiveSource = job.analysisSource();
-        if (effectiveSource == null && job.stageHistory().contains(AnalysisStage.LOCAL_FALLBACK)) {
-            effectiveSource = AnalysisSource.LOCAL_FALLBACK;
-        }
-        AnalysisStage skippedStage = switch (effectiveSource) {
+        AnalysisStage skippedStage = switch (job.analysisSource()) {
             case GEMINI -> AnalysisStage.LOCAL_FALLBACK;
             case LOCAL_FALLBACK -> AnalysisStage.ANALYZING_WITH_GEMINI;
             case null -> null;

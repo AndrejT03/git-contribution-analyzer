@@ -89,7 +89,7 @@ class AnalysisControllerTest {
                 .andExpect(redirectedUrl("/analyses/" + id + "?newAnalysis=true"));
 
         verify(analysisJobService).startAnalysis(any());
-        verify(reportService, never()).createReport(any());
+        verifyNoInteractions(reportService);
     }
 
     @Test
@@ -474,7 +474,7 @@ class AnalysisControllerTest {
     void rejectsMalformedPdfLinksBeforeLookingUpAReport() throws Exception {
         mockMvc.perform(get("/reports/not-a-uuid/pdf"))
                 .andExpect(status().isBadRequest())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.error").value(
                         "The requested PDF address contains an invalid value."
                 ));

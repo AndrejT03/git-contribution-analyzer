@@ -1,4 +1,5 @@
 package mk.ukim.finki.gitcontributionanalyzer.service.impl;
+import jakarta.validation.Validator;
 import mk.ukim.finki.gitcontributionanalyzer.config.AppSettings;
 import mk.ukim.finki.gitcontributionanalyzer.dto.*;
 import mk.ukim.finki.gitcontributionanalyzer.enums.CommitCategory;
@@ -17,7 +18,6 @@ import org.springframework.web.client.RestClientResponseException;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
-
 import java.net.SocketTimeoutException;
 import java.net.http.HttpClient;
 import java.net.http.HttpTimeoutException;
@@ -26,7 +26,7 @@ import java.util.*;
 import java.util.concurrent.TimeoutException;
 
 @Service
-public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
+public class GeminiAnalysisServiceImpl implements GeminiAnalysisService  {
 
     private static final String GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
     private static final Set<String> BLOCKED_FINISH_REASONS = Set.of(
@@ -38,16 +38,18 @@ public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
     private final AppSettings settings;
     private final GeminiPromptBuilder promptBuilder;
     private final ObjectMapper objectMapper;
+    private final Validator validator;
     private final RestClient restClient;
 
     public GeminiAnalysisServiceImpl(
             AppSettings settings,
             GeminiPromptBuilder promptBuilder,
-            ObjectMapper objectMapper) {
-
+            ObjectMapper objectMapper,
+            Validator validator) {
         this.settings = settings;
         this.promptBuilder = promptBuilder;
         this.objectMapper = objectMapper;
+        this.validator = validator;
 
         HttpClient httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(20))
@@ -145,7 +147,9 @@ public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
     }
 
     public void validateResponse(ContributionAnalysis analysis, RepositoryData repositoryData) {
-        validateAnalysis(analysis);
+        if (analysis == null || !validator.validate(analysis).isEmpty()) {
+            throw invalidResponse();
+        }
 
         int percentageSum = 0;
         Set<String> analyzedHashes = new HashSet<>();
@@ -155,7 +159,6 @@ public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
             percentageSum += contributor.contributionPercentage();
 
             for (CommitAnalysis commit : contributor.commitAnalyses()) {
-                validateCommit(commit);
                 if (!analyzedHashes.add(commit.hash())) {
                     throw invalidResponse();
                 }
@@ -169,41 +172,7 @@ public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
         validateCommitCoverage(repositoryData, analyzedHashes);
     }
 
-    private void validateAnalysis(ContributionAnalysis analysis) {
-        if (analysis == null || analysis.contributors() == null || analysis.contributors().isEmpty()) {
-            throw invalidResponse();
-        }
-        if (analysis.contributors().stream().anyMatch(Objects::isNull)) {
-            throw invalidResponse();
-        }
-        if (isBlank(analysis.projectSummary())
-                || isBlank(analysis.goalAlignment())
-                || isBlank(analysis.conclusion())
-                || isBlank(analysis.methodology())
-                || analysis.teamIndicators() == null
-                || analysis.teamIndicators().stream().anyMatch(this::isInvalidTeamIndicator)) {
-            throw invalidResponse();
-        }
-    }
-
     private void validateContributor(ContributorAnalysis contributor) {
-        if (isBlank(contributor.name())
-                || isBlank(contributor.email())
-                || contributor.contributionLevel() == null
-                || isBlank(contributor.summary())
-                || contributor.mainWork() == null
-                || containsBlank(contributor.mainWork())
-                || contributor.categorySummary() == null
-                || contributor.categorySummary().stream().anyMatch(this::isInvalidCategorySummary)
-                || contributor.commitAnalyses() == null
-                || contributor.commitAnalyses().stream().anyMatch(Objects::isNull)
-                || contributor.commitAnalyses().stream().anyMatch(commit -> commit.category() == null)
-                || contributor.riskFlags() == null
-                || containsBlank(contributor.riskFlags())
-                || contributor.contributionPercentage() < 0
-                || contributor.contributionPercentage() > 100) {
-            throw invalidResponse();
-        }
         ContributionLevel expectedLevel = ContributionLevel.fromPercentage(
                 contributor.contributionPercentage()
         );
@@ -230,19 +199,6 @@ public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
         }
     }
 
-    private void validateCommit(CommitAnalysis commit) {
-        if (commit == null
-                || isBlank(commit.hash())
-                || commit.hash().length() < 7
-                || isBlank(commit.message())
-                || commit.category() == null
-                || isBlank(commit.explanation())
-                || commit.importance() < 1
-                || commit.importance() > 5) {
-            throw invalidResponse();
-        }
-    }
-
     private void validateCommitCoverage(
             RepositoryData repositoryData,
             Set<String> analyzedHashes) {
@@ -255,25 +211,6 @@ public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
 
     private GeminiException invalidResponse() {
         return new GeminiException(GeminiFailureReason.INVALID_RESPONSE);
-    }
-
-    private boolean isInvalidCategorySummary(CategorySummary category) {
-        return category == null
-                || category.category() == null
-                || category.commitCount() < 0
-                || isBlank(category.explanation());
-    }
-
-    private boolean isInvalidTeamIndicator(TeamIndicator indicator) {
-        return indicator == null
-                || isBlank(indicator.type())
-                || indicator.severity() == null
-                || isBlank(indicator.title())
-                || isBlank(indicator.explanation());
-    }
-
-    private boolean containsBlank(List<String> values) {
-        return values.stream().anyMatch(this::isBlank);
     }
 
     public GeminiException mapRestClientFailure(RestClientException exception) {
@@ -317,10 +254,6 @@ public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
             current = cause;
         }
         return false;
-    }
-
-    private boolean isBlank(String value) {
-        return value == null || value.isBlank();
     }
 
     private String removeMarkdownFence(String text) {

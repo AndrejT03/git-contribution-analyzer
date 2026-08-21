@@ -41,7 +41,6 @@ class ReportServiceImplTest {
     @Mock
     private AnalysisReportRepository reportRepository;
 
-    @Mock
     private AppSettings settings;
 
     @Mock
@@ -53,6 +52,16 @@ class ReportServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        settings = new AppSettings(
+                80,
+                6000,
+                120,
+                "test-api-key",
+                "gemini-test-model",
+                60,
+                false,
+                ""
+        );
         reportService = new ReportServiceImpl(
                 gitRepositoryService,
                 geminiAnalysisService,
@@ -76,10 +85,11 @@ class ReportServiceImplTest {
                         "sample diff"
                 ))
         );
-        request = new AnalysisRequest();
-        request.setRepositoryUrl(repository.url());
-        request.setProjectDescription("Team project for planning shared tasks.");
-        request.setEmail("mentor@example.com");
+        request = new AnalysisRequest(
+                repository.url(),
+                "Team project for planning shared tasks.",
+                "mentor@example.com"
+        );
 
         when(gitRepositoryService.readRepository(repository.url())).thenReturn(repository);
         when(emailReportService.sendReport(any()))
@@ -89,7 +99,6 @@ class ReportServiceImplTest {
     @Test
     void keepsGeminiAsThePrimaryAnalyzer() {
         ContributionAnalysis geminiResult = analysis("Gemini methodology");
-        when(settings.geminiModel()).thenReturn("gemini-test-model");
         when(geminiAnalysisService.analyze(any(), any())).thenReturn(geminiResult);
         List<AnalysisStage> stages = new ArrayList<>();
         List<AnalysisSource> sources = new ArrayList<>();
@@ -138,37 +147,24 @@ class ReportServiceImplTest {
                 AnalysisStage.DELIVERING_EMAIL
         );
         assertThat(sources).containsExactly(AnalysisSource.LOCAL_FALLBACK);
-        verify(localAnalysisService).analyze(request.getProjectDescription(), repository);
+        verify(localAnalysisService).analyze(request.projectDescription(), repository);
         verify(reportRepository).save(report);
     }
 
     @Test
     void keepsTheOnScreenReportWhenEmailDeliveryFailsUnexpectedly() {
         ContributionAnalysis result = analysis("Gemini methodology");
-        when(settings.geminiModel()).thenReturn("gemini-test-model");
         when(geminiAnalysisService.analyze(any(), any())).thenReturn(result);
         when(emailReportService.sendReport(any()))
                 .thenThrow(new IllegalStateException("Email template failed"));
 
-        var report = reportService.createReport(request);
+        var report = reportService.createReport(request, ignored -> { });
 
         assertThat(report.analysis()).isSameAs(result);
         assertThat(report.emailDelivery().status()).isEqualTo(EmailDeliveryStatus.FAILED);
         assertThat(report.emailDelivery().message()).contains("available on screen");
         verify(reportRepository, times(2)).save(any());
         verify(reportRepository).save(report);
-    }
-
-    @Test
-    void supportsExistingSynchronousCallersWithoutAProgressListener() {
-        ContributionAnalysis result = analysis("Gemini methodology");
-        when(settings.geminiModel()).thenReturn("gemini-test-model");
-        when(geminiAnalysisService.analyze(any(), any())).thenReturn(result);
-
-        var report = reportService.createReport(request);
-
-        assertThat(report.analysis()).isSameAs(result);
-        assertThat(report.emailDelivery().status()).isEqualTo(EmailDeliveryStatus.DISABLED);
     }
 
     private ContributionAnalysis analysis(String methodology) {

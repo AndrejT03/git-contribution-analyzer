@@ -20,8 +20,8 @@ public class LocalCommitClassifier {
 
     public CommitAnalysis analyze(GitCommit commit, String projectDescription) {
         CommitCategory category = classify(commit);
-        int importance = calculateImportance(commit, projectDescription, category);
         int changedLines = changedLines(commit);
+        int importance = calculateImportance(commit, projectDescription, category, changedLines);
 
         String explanation = "Local rules classified this commit as " + category
                 + " from its message and changed file paths. "
@@ -37,33 +37,34 @@ public class LocalCommitClassifier {
     }
 
     private CommitCategory classify(GitCommit commit) {
-        if (commit.changedFiles().isEmpty()) {
+        List<ChangedFile> files = commit.changedFiles();
+        if (files.isEmpty()) {
             return CommitCategory.OTHER;
         }
 
-        String message = commit.message().toLowerCase(Locale.ROOT);
+        Set<String> messageWords = words(commit.message());
 
-        if (commit.changedFiles().stream().allMatch(this::isDocumentationFile)) {
+        if (files.stream().allMatch(this::isDocumentationFile)) {
             return CommitCategory.DOCUMENTATION;
         }
-        if (commit.changedFiles().stream().allMatch(this::isGeneratedFile)) {
+        if (files.stream().allMatch(this::isGeneratedFile)) {
             return CommitCategory.OTHER;
         }
-        if (containsWord(message, "format", "formatting", "whitespace", "indent")) {
+        if (containsAny(messageWords, "format", "formatting", "whitespace", "indent")) {
             return CommitCategory.FORMATTING;
         }
-        if (containsWord(message, "test", "tests", "testing", "spec")
-                || commit.changedFiles().stream().anyMatch(this::isTestFile)) {
+        if (containsAny(messageWords, "test", "tests", "testing", "spec")
+                || files.stream().anyMatch(this::isTestFile)) {
             return CommitCategory.TESTING;
         }
-        if (containsWord(message, "fix", "fixed", "fixes", "bug", "repair", "hotfix")) {
+        if (containsAny(messageWords, "fix", "fixed", "fixes", "bug", "repair", "hotfix")) {
             return CommitCategory.BUG_FIX;
         }
-        if (containsWord(message, "refactor", "cleanup", "restructure", "rename")) {
+        if (containsAny(messageWords, "refactor", "cleanup", "restructure", "rename")) {
             return CommitCategory.REFACTORING;
         }
-        if (containsWord(message, "config", "setup", "dependency", "dependencies")
-                || commit.changedFiles().stream().allMatch(this::isConfigurationFile)) {
+        if (containsAny(messageWords, "config", "setup", "dependency", "dependencies")
+                || files.stream().allMatch(this::isConfigurationFile)) {
             return CommitCategory.CONFIGURATION;
         }
         return CommitCategory.FUNCTIONAL;
@@ -72,21 +73,9 @@ public class LocalCommitClassifier {
     private int calculateImportance(
             GitCommit commit,
             String projectDescription,
-            CommitCategory category) {
-        int lines = changedLines(commit);
-        int importance;
-
-        if (lines <= 10) {
-            importance = 1;
-        } else if (lines <= 50) {
-            importance = 2;
-        } else if (lines <= 150) {
-            importance = 3;
-        } else if (lines <= 400) {
-            importance = 4;
-        } else {
-            importance = 5;
-        }
+            CommitCategory category,
+            int changedLines) {
+        int importance = importanceForChangedLines(changedLines);
 
         if (matchesProjectKeyword(commit, projectDescription)) {
             importance = Math.min(5, importance + 1);
@@ -101,6 +90,22 @@ public class LocalCommitClassifier {
             importance = 1;
         }
         return importance;
+    }
+
+    private int importanceForChangedLines(int lines) {
+        if (lines <= 10) {
+            return 1;
+        }
+        if (lines <= 50) {
+            return 2;
+        }
+        if (lines <= 150) {
+            return 3;
+        }
+        if (lines <= 400) {
+            return 4;
+        }
+        return 5;
     }
 
     private boolean matchesProjectKeyword(GitCommit commit, String projectDescription) {
@@ -160,8 +165,7 @@ public class LocalCommitClassifier {
                 || path.contains(".spec.");
     }
 
-    private boolean containsWord(String text, String... expectedWords) {
-        Set<String> actualWords = words(text);
+    private boolean containsAny(Set<String> actualWords, String... expectedWords) {
         return Arrays.stream(expectedWords).anyMatch(actualWords::contains);
     }
 

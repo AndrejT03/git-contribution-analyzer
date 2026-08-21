@@ -1,51 +1,44 @@
 package mk.ukim.finki.gitcontributionanalyzer.config;
-import org.springframework.stereotype.Component;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.validation.annotation.Validated;
 
-@Component
-public class AppSettings {
-    private final EnvFile envFile;
+@Validated
+@ConfigurationProperties(prefix = "app")
+public record AppSettings(
+        @Min(1)
+        @Max(200)
+        int maxCommits,
 
-    public AppSettings(EnvFile envFile) {
-        this.envFile = envFile;
+        @Min(500)
+        @Max(20000)
+        int maxDiffChars,
+
+        @Min(20)
+        @Max(600)
+        int gitTimeoutSeconds,
+
+        String geminiApiKey,
+
+        String geminiModel,
+
+        @Min(30)
+        @Max(600)
+        int geminiTimeoutSeconds,
+
+        boolean mailEnabled,
+
+        String mailFrom
+) {
+
+    public AppSettings {
+        geminiApiKey = normalized(geminiApiKey);
+        geminiModel = normalized(geminiModel);
+        mailFrom = normalized(mailFrom);
     }
 
-    public int maxCommits() {
-        return envFile.getInt("MAX_COMMITS", 80, 1, 200);
-    }
-
-    public int maxDiffChars() {
-        return envFile.getInt("MAX_DIFF_CHARS", 6000, 500, 20000);
-    }
-
-    public int gitTimeoutSeconds() { return envFile.getInt("GIT_TIMEOUT_SECONDS", 120, 20, 600); }
-
-    public String geminiApiKey() { return envFile.getOrDefault("GEMINI_API_KEY", "").trim(); }
-
-    public String geminiModel() { return envFile.getOrDefault("GEMINI_MODEL", "gemini-3.6-flash").trim(); }
-
-    public int geminiTimeoutSeconds() { return envFile.getInt("GEMINI_TIMEOUT_SECONDS", 180, 30, 600); }
-
-    public boolean mailEnabled() {
-        return envFile.getBoolean("MAIL_ENABLED", false);
-    }
-
-    public String mailHost() {
-        return envFile.getOrDefault("MAIL_HOST", "smtp.gmail.com").trim();
-    }
-
-    public int mailPort() {
-        return envFile.getInt("MAIL_PORT", 587, 1, 65535);
-    }
-
-    public String mailUsername() {
-        return envFile.getOrDefault("MAIL_USERNAME", "").trim();
-    }
-
-    public String mailPassword() {
-        return envFile.getOrDefault("MAIL_PASSWORD", "");
-    }
-
-    public String mailFrom() {
-        return envFile.getOrDefault("MAIL_FROM", mailUsername()).trim();
+    private static String normalized(String value) {
+        return value == null ? "" : value.trim();
     }
 }

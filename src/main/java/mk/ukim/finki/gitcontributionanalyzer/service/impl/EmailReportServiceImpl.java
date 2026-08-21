@@ -5,50 +5,58 @@ import mk.ukim.finki.gitcontributionanalyzer.enums.EmailDeliveryStatus;
 import mk.ukim.finki.gitcontributionanalyzer.model.AnalysisReport;
 import mk.ukim.finki.gitcontributionanalyzer.model.EmailDelivery;
 import mk.ukim.finki.gitcontributionanalyzer.service.EmailReportService;
+import org.springframework.boot.mail.autoconfigure.MailProperties;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.MailException;
-import org.springframework.mail.javamail.JavaMailSenderImpl;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 import java.nio.charset.StandardCharsets;
-import java.util.Properties;
 
 @Service
 public class EmailReportServiceImpl implements EmailReportService {
 
     private final AppSettings settings;
+    private final MailProperties mailProperties;
+    private final JavaMailSender mailSender;
     private final SpringTemplateEngine templateEngine;
 
-    public EmailReportServiceImpl(AppSettings settings, SpringTemplateEngine templateEngine) {
+    public EmailReportServiceImpl(
+            AppSettings settings,
+            MailProperties mailProperties,
+            JavaMailSender mailSender,
+            SpringTemplateEngine templateEngine) {
         this.settings = settings;
+        this.mailProperties = mailProperties;
+        this.mailSender = mailSender;
         this.templateEngine = templateEngine;
     }
 
     @Override
     public EmailDelivery sendReport(AnalysisReport report) {
-        if(!settings.mailEnabled()) {
+        if (!settings.mailEnabled()) {
             return new EmailDelivery(
                     EmailDeliveryStatus.DISABLED,
-                    "The report is ready, but email delivery is disabled in .env."
+                    "The report is ready, but email delivery is disabled in the application configuration."
             );
         }
 
-        if(!hasMailConfiguration()) {
+        if (!hasMailConfiguration()) {
             return new EmailDelivery(
                     EmailDeliveryStatus.FAILED,
-                    "SMTP settings are missing from the .env file."
+                    "SMTP settings are missing from the application configuration."
             );
         }
 
         try {
             String html = renderEmail(report);
-            JavaMailSenderImpl mailSender = createMailSender();
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, StandardCharsets.UTF_8.name());
 
-            helper.setFrom(settings.mailFrom());
+            helper.setFrom(senderAddress());
             helper.setTo(report.requestedEmail());
             helper.setSubject("Git Contribution AI report · " + report.repositoryName());
             helper.setText(html, true);
@@ -63,8 +71,7 @@ public class EmailReportServiceImpl implements EmailReportService {
                     EmailDeliveryStatus.SENT,
                     "The report was sent to " + report.requestedEmail() + "."
             );
-
-        } catch (MailException | jakarta.mail.MessagingException e) {
+        } catch (MailException | jakarta.mail.MessagingException exception) {
             return new EmailDelivery(
                     EmailDeliveryStatus.FAILED,
                     "The report is ready, but the SMTP server could not deliver the email."
@@ -72,34 +79,26 @@ public class EmailReportServiceImpl implements EmailReportService {
         }
     }
 
-    public String renderEmail(AnalysisReport report) {
+    private String renderEmail(AnalysisReport report) {
         Context context = new Context();
         context.setVariable("report", report);
         return templateEngine.process("email-report", context);
     }
 
-    private JavaMailSenderImpl createMailSender() {
-        JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
-        mailSender.setHost(settings.mailHost());
-        mailSender.setPort(settings.mailPort());
-        mailSender.setUsername(settings.mailUsername());
-        mailSender.setPassword(settings.mailPassword());
-
-        Properties properties = mailSender.getJavaMailProperties();
-        properties.put("mail.smtp.auth", "true");
-        properties.put("mail.smtp.starttls.enable", "true");
-        properties.put("mail.smtp.connectiontimeout", "10000");
-        properties.put("mail.smtp.timeout", "10000");
-        properties.put("mail.smtp.writetimeout", "10000");
-        return mailSender;
+    private boolean hasMailConfiguration() {
+        return StringUtils.hasText(mailProperties.getHost())
+                && StringUtils.hasText(mailProperties.getUsername())
+                && StringUtils.hasText(mailProperties.getPassword())
+                && StringUtils.hasText(senderAddress());
     }
 
-    public boolean hasMailConfiguration() {
-        return !settings.mailHost().isBlank()
-                && !settings.mailUsername().isBlank()
-                && !settings.mailPassword().isBlank()
-                && !settings.mailFrom().isBlank();
+    private String senderAddress() {
+        return StringUtils.hasText(settings.mailFrom())
+                ? settings.mailFrom()
+                : mailProperties.getUsername();
     }
 
-    private String safeFileName(String name) { return name.replaceAll("[^a-zA-Z0-9._-]", "-"); }
+    private String safeFileName(String name) {
+        return name.replaceAll("[^a-zA-Z0-9._-]", "-");
+    }
 }

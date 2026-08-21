@@ -21,8 +21,16 @@ class GitRepositoryServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        settings = mock(AppSettings.class);
-        when(settings.gitTimeoutSeconds()).thenReturn(30);
+        settings = new AppSettings(
+                80,
+                6000,
+                30,
+                "",
+                "gemini-3.7-flash",
+                180,
+                false,
+                ""
+        );
         service = new GitRepositoryServiceImpl(settings);
     }
 

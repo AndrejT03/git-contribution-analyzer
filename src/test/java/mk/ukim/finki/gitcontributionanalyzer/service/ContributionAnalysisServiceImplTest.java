@@ -1,4 +1,6 @@
 package mk.ukim.finki.gitcontributionanalyzer.service;
+import jakarta.validation.Validation;
+import jakarta.validation.ValidatorFactory;
 import mk.ukim.finki.gitcontributionanalyzer.config.AppSettings;
 import mk.ukim.finki.gitcontributionanalyzer.dto.ContributionAnalysis;
 import mk.ukim.finki.gitcontributionanalyzer.dto.ContributorAnalysis;
@@ -8,6 +10,8 @@ import mk.ukim.finki.gitcontributionanalyzer.model.GitCommit;
 import mk.ukim.finki.gitcontributionanalyzer.model.RepositoryData;
 import mk.ukim.finki.gitcontributionanalyzer.service.impl.GeminiAnalysisServiceImpl;
 import mk.ukim.finki.gitcontributionanalyzer.service.impl.GeminiPromptBuilder;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -28,18 +32,39 @@ import static org.mockito.Mockito.when;
 
 class ContributionAnalysisServiceImplTest {
 
+    private static ValidatorFactory validatorFactory;
+
     private ObjectMapper objectMapper;
     private GeminiAnalysisServiceImpl service;
 
+    @BeforeAll
+    static void createValidatorFactory() {
+        validatorFactory = Validation.buildDefaultValidatorFactory();
+    }
+
+    @AfterAll
+    static void closeValidatorFactory() {
+        validatorFactory.close();
+    }
+
     @BeforeEach
     void setUp() {
-        AppSettings settings = mock(AppSettings.class);
-        when(settings.geminiTimeoutSeconds()).thenReturn(60);
+        AppSettings settings = new AppSettings(
+                80,
+                6000,
+                120,
+                "test-api-key",
+                "gemini-test-model",
+                60,
+                false,
+                ""
+        );
         objectMapper = new ObjectMapper();
         service = new GeminiAnalysisServiceImpl(
                 settings,
                 mock(GeminiPromptBuilder.class),
-                objectMapper
+                objectMapper,
+                validatorFactory.getValidator()
         );
     }
 
@@ -215,6 +240,8 @@ class ContributionAnalysisServiceImplTest {
 
     @ParameterizedTest
     @ValueSource(strings = {
+            "blank-project-summary",
+            "negative-contribution-percentage",
             "null-contribution-level",
             "blank-main-work",
             "null-risk-flag",
@@ -225,6 +252,9 @@ class ContributionAnalysisServiceImplTest {
             "duplicate-summary-category",
             "null-commit-category",
             "unknown-commit-category",
+            "short-commit-hash",
+            "invalid-commit-importance",
+            "null-team-indicator-entry",
             "null-indicator-severity",
             "unknown-indicator-severity"
     })
@@ -236,6 +266,8 @@ class ContributionAnalysisServiceImplTest {
         ObjectNode teamIndicator = (ObjectNode) analysisJson.path("teamIndicators").path(0);
 
         switch (invalidField) {
+            case "blank-project-summary" -> analysisJson.put("projectSummary", " ");
+            case "negative-contribution-percentage" -> contributor.put("contributionPercentage", -1);
             case "null-contribution-level" -> contributor.putNull("contributionLevel");
             case "blank-main-work" -> replaceWithInvalidText(contributor, "mainWork", "");
             case "null-risk-flag" -> replaceWithInvalidText(contributor, "riskFlags", null);
@@ -251,6 +283,13 @@ class ContributionAnalysisServiceImplTest {
                     ((ArrayNode) contributor.path("categorySummary")).add(categorySummary.deepCopy());
             case "null-commit-category" -> commitAnalysis.putNull("category");
             case "unknown-commit-category" -> commitAnalysis.put("category", "UNKNOWN");
+            case "short-commit-hash" -> commitAnalysis.put("hash", "abc123");
+            case "invalid-commit-importance" -> commitAnalysis.put("importance", 6);
+            case "null-team-indicator-entry" -> {
+                ArrayNode indicators = (ArrayNode) analysisJson.path("teamIndicators");
+                indicators.removeAll();
+                indicators.addNull();
+            }
             case "null-indicator-severity" -> teamIndicator.putNull("severity");
             case "unknown-indicator-severity" -> teamIndicator.put("severity", "LOUD");
             default -> throw new IllegalArgumentException("Unknown test field: " + invalidField);
