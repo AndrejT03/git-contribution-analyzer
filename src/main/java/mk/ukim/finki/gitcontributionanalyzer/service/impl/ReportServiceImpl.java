@@ -98,7 +98,7 @@ public class ReportServiceImpl implements ReportService {
             return new AnalysisOutcome(
                     analysis,
                     AnalysisSource.LOCAL_FALLBACK,
-                    "Built-in heuristic rules",
+                    "On-device analysis",
                     exception.userMessage()
                             + " This report was generated with the built-in local heuristic analyzer."
             );

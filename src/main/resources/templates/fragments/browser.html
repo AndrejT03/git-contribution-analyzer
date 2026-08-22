@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head(titleNode, themeColor)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" th:content="${themeColor}">
+    <title th:replace="${titleNode}">Git Contribution AI</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" th:href="@{/css/style.css(v='27.0')}">
+</head>
+<body>
+<a th:fragment="brand" class="site-brand" th:href="@{/}" aria-label="Git Contribution AI home">
+    <span class="site-brand__mark" aria-hidden="true"><i class="bi bi-bezier2"></i></span>
+    <span class="site-brand__name">Git Contribution <span>AI</span></span>
+</a>
+
+<script th:fragment="app-script" th:src="@{/js/app.js(v='27.0')}"></script>
+<script th:fragment="preview-script" th:src="@{/js/design-preview.js(v='27.0')}"></script>
+</body>
+</html>

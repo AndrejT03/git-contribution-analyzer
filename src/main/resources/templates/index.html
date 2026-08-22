@@ -1,21 +1,12 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#ffffff">
+<head th:replace="~{fragments/browser :: head(~{::title}, '#ffffff')}">
   <title>Git Contribution AI</title>
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
-  <link rel="stylesheet" th:href="@{/css/style.css(v='26.2')}">
 </head>
 <body class="home-body">
 <header class="site-header">
   <div class="site-header__inner" data-reveal>
-    <a class="site-brand" th:href="@{/}" aria-label="Git Contribution AI home">
-      <span class="site-brand__mark" aria-hidden="true"><i class="bi bi-bezier2"></i></span>
-      <span class="site-brand__name">Git Contribution <span>AI</span></span>
-    </a>
+    <a th:replace="~{fragments/browser :: brand}"></a>
     <a class="site-header__link" href="#how-it-works">How it works</a>
   </div>
 </header>
@@ -50,11 +41,6 @@
     </div>
 
     <div class="analysis-form-card" data-reveal-on-scroll style="--reveal-delay: 80ms">
-      <div class="error-message" th:if="${error}" role="alert">
-        <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
-        <span th:text="${error}">The request could not be completed.</span>
-      </div>
-
       <form id="analysisForm" th:action="@{/analyze}" th:object="${analysisRequest}" method="post">
         <div class="form-field"
              th:classappend="${#fields.hasErrors('repositoryUrl') ? ' form-field--invalid' : ''}">
@@ -142,6 +128,6 @@
   </div>
 </div>
 
-<script th:src="@{/js/app.js(v='26.2')}"></script>
+<script th:replace="~{fragments/browser :: app-script}"></script>
 </body>
 </html>

@@ -117,17 +117,27 @@ if (form) {
     });
 }
 
+// Double-click the email field to insert the suggested address (you@example.com)
+const emailInput = document.getElementById("email");
+if (emailInput) {
+    emailInput.addEventListener("dblclick", () => {
+        // Insert suggested email on double click and notify any listeners
+        emailInput.value = "you@example.com";
+        emailInput.dispatchEvent(new Event("input", { bubbles: true }));
+        emailInput.focus();
+    });
+}
+
 const progressRoot = document.querySelector("[data-analysis-progress]");
 
 if (progressRoot) {
-    const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     const MIN_PROGRESS_TWEEN_MS = 800;
     const MAX_PROGRESS_TWEEN_MS = 2400;
     const PROGRESS_TWEEN_MS_PER_PERCENT = 45;
     const MAX_PROGRESS_DELTA_PER_FRAME = 0.72;
     const STAGE_HOLD_MS = 450;
-    const INITIAL_STAGE_HOLD_MS = prefersReducedMotion ? 0 : 650;
-    const COMPLETION_HOLD_MS = prefersReducedMotion ? 1200 : 1600;
+    const INITIAL_STAGE_HOLD_MS = motionIsReduced ? 0 : 650;
+    const COMPLETION_HOLD_MS = motionIsReduced ? 1200 : 1600;
     const statusUrl = progressRoot.dataset.statusUrl;
     const initialStatus = progressRoot.dataset.initialStatus;
     const replayFromStart = progressRoot.dataset.replayFromStart === "true";
@@ -140,7 +150,6 @@ if (progressRoot) {
     const progressFailure = document.getElementById("progressFailure");
     const connectionStatus = document.getElementById("connectionStatus");
     const repositoryLabel = document.getElementById("repositoryLabel");
-    const previewBadge = document.getElementById("previewBadge");
     const stageItems = Array.from(progressRoot.querySelectorAll("[data-stage-name]"));
     const stages = stageItems.map((item, index) => ({
         index,
@@ -149,9 +158,8 @@ if (progressRoot) {
         label: item.dataset.stageLabel,
         message: item.dataset.stageMessage
     }));
-    const previewButtons = Array.from(progressRoot.querySelectorAll("[data-progress-preview]"));
     let retryDelay = 1000;
-    let manualPreview = false;
+    let pollingStopped = false;
     let completionScheduled = false;
     let displayedProgress = Number(progressRing.getAttribute("aria-valuenow")) || 0;
     let displayedStageIndex = Math.max(0, stageItems.findIndex((item) => item.classList.contains("is-current")));
@@ -166,40 +174,23 @@ if (progressRoot) {
         }
     };
 
-    const fallbackStageState = (job, itemIndex, activeIndex) => {
-        const itemName = stageItems[itemIndex].dataset.stageName;
-        const skippedStage = job.analysisSource === "LOCAL_FALLBACK"
-            ? "ANALYZING_WITH_GEMINI"
-            : (job.analysisSource === "GEMINI" ? "LOCAL_FALLBACK" : null);
-
-        if (itemName === skippedStage) {
-            return "SKIPPED";
-        }
-        if (job.status === "COMPLETED" && itemIndex === activeIndex) {
-            return "COMPLETE";
-        }
-        if (itemIndex === activeIndex) {
-            return "ACTIVE";
-        }
-        return itemIndex < activeIndex ? "COMPLETE" : "PENDING";
-    };
-
     const setStageState = (job) => {
         const activeIndex = stageItems.findIndex((item) => item.dataset.stageName === job.stage);
-        if (activeIndex < 0) {
+        if (activeIndex < 0 || !job.stageStates) {
             return;
         }
 
-        stageItems.forEach((item, index) => {
-            const state = job.stageStates?.[item.dataset.stageName]
-                ?? fallbackStageState(job, index, activeIndex);
+        stageItems.forEach((item) => {
+            const state = job.stageStates[item.dataset.stageName];
+            if (!state) {
+                return;
+            }
             const itemIsComplete = state === "COMPLETE";
             const itemIsCurrent = state === "ACTIVE";
             const itemIsSkipped = state === "SKIPPED";
             item.classList.toggle("is-complete", itemIsComplete);
             item.classList.toggle("is-current", itemIsCurrent);
             item.classList.toggle("is-skipped", itemIsSkipped);
-            item.dataset.stageState = state;
             if (itemIsCurrent) {
                 item.setAttribute("aria-current", "step");
             } else {
@@ -216,7 +207,6 @@ if (progressRoot) {
     const applyProgress = (progress) => {
         const roundedProgress = Math.round(progress);
         displayedProgress = progress;
-        progressRing.style.setProperty("--progress-stop", `${progress}%`);
         if (progressRing.getAttribute("aria-valuenow") !== String(roundedProgress)) {
             progressRing.setAttribute("aria-valuenow", String(roundedProgress));
         }
@@ -240,7 +230,7 @@ if (progressRoot) {
             return Promise.resolve();
         }
 
-        if (prefersReducedMotion) {
+        if (motionIsReduced) {
             applyProgress(targetProgress);
             return Promise.resolve();
         }
@@ -366,7 +356,7 @@ if (progressRoot) {
             return;
         }
 
-        if (prefersReducedMotion) {
+        if (motionIsReduced) {
             await renderStatus(job);
             displayedStageIndex = targetStageIndex;
             return;
@@ -403,7 +393,7 @@ if (progressRoot) {
         }
 
         if (!reportUrl) {
-            showFailurePreview("The report was completed but is not available. Start a new analysis and try again.");
+            showFailure("The report was completed but is not available. Start a new analysis and try again.");
             return;
         }
 
@@ -413,16 +403,8 @@ if (progressRoot) {
         });
     };
 
-    const selectPreviewButton = (state) => {
-        previewButtons.forEach((button) => {
-            const selected = button.dataset.progressPreview === state;
-            button.classList.toggle("is-selected", selected);
-            button.setAttribute("aria-pressed", String(selected));
-        });
-    };
-
-    const showFailurePreview = (message) => {
-        manualPreview = true;
+    const showFailure = (message) => {
+        pollingStopped = true;
         setConnected();
         progressRoot.classList.add("is-failed");
         updateText(connectionStatus, "Analysis stopped");
@@ -430,23 +412,8 @@ if (progressRoot) {
         progressFailure.hidden = false;
     };
 
-    previewButtons.forEach((button) => {
-        button.addEventListener("click", () => {
-            const state = button.dataset.progressPreview;
-            selectPreviewButton(state);
-
-            if (state === "failure") {
-                showFailurePreview("The repository could not be read. Check that it is public and available, then try again.");
-            } else if (state === "missing") {
-                showFailurePreview("This analysis is no longer available. The application may have restarted.");
-            } else if (state === "restart") {
-                window.location.assign(window.location.pathname);
-            }
-        });
-    });
-
     async function pollStatus() {
-        if (manualPreview) {
+        if (pollingStopped) {
             return;
         }
 
@@ -457,8 +424,7 @@ if (progressRoot) {
             });
 
             if (response.status === 404) {
-                showFailurePreview("This analysis is no longer available. The application may have restarted.");
-                selectPreviewButton("missing");
+                showFailure("This analysis is no longer available. The application may have restarted.");
                 return;
             }
 
@@ -488,47 +454,16 @@ if (progressRoot) {
         }
     }
 
-    const previewQuery = new URLSearchParams(window.location.search);
-    const isPreviewRoute = window.location.pathname.startsWith("/__preview/");
-    if (isPreviewRoute && previewQuery.get("preview") === "sequence") {
-        manualPreview = true;
-        previewBadge.hidden = previewQuery.get("chrome") !== "1";
-        window.setTimeout(() => {
-            void renderStatusSequence({
-                progress: 100,
-                stage: "COMPLETED",
-                stageLabel: "Completed",
-                message: "Your contribution report is ready.",
-                repositoryLabel: repositoryLabel.textContent,
-                status: "COMPLETED",
-                analysisSource: "GEMINI",
-                stageHistory: [
-                    "QUEUED",
-                    "STARTING",
-                    "READING_REPOSITORY",
-                    "ANALYZING_WITH_GEMINI",
-                    "PREPARING_REPORT",
-                    "SAVING_REPORT",
-                    "DELIVERING_EMAIL",
-                    "COMPLETED"
-                ],
-                stageStates: {LOCAL_FALLBACK: "SKIPPED"}
-            });
-        }, INITIAL_STAGE_HOLD_MS);
-    } else if (isPreviewRoute && previewQuery.get("preview") === "reconnecting") {
-        manualPreview = true;
-        renderStatus({
-            progress: 55,
-            stage: "ANALYZING_WITH_GEMINI",
-            stageLabel: "Analyzing with Gemini",
-            message: "Classifying commits and assessing their alignment with the project goal.",
-            repositoryLabel: repositoryLabel.textContent,
-            status: "RUNNING"
+    const previewInitializer = window.gitContributionDesignPreview?.initializeProgress;
+    if (typeof previewInitializer === "function") {
+        pollingStopped = true;
+        previewInitializer({
+            initialStageHoldMs: INITIAL_STAGE_HOLD_MS,
+            renderStatus,
+            renderStatusSequence,
+            setReconnecting,
+            showFailure
         });
-        setReconnecting();
-        previewBadge.hidden = previewQuery.get("chrome") !== "1";
-    } else if (isPreviewRoute) {
-        manualPreview = true;
     } else if (replayFromStart) {
         window.setTimeout(pollStatus, INITIAL_STAGE_HOLD_MS);
     } else if (initialStatus === "COMPLETED") {
@@ -536,53 +471,5 @@ if (progressRoot) {
         scheduleReportRedirect(initialReportUrl);
     } else {
         window.setTimeout(pollStatus, 350);
-    }
-}
-
-const errorCard = document.querySelector("[data-error-card]");
-
-if (errorCard) {
-    const errorStatus = errorCard.querySelector("[data-error-status]");
-    const errorHeading = errorCard.querySelector("[data-error-heading]");
-    const errorDescription = errorCard.querySelector("[data-error-description]");
-    const errorPreviewButtons = Array.from(document.querySelectorAll("[data-error-preview]"));
-    const states = {
-        "400": {
-            heading: "We couldn't process that request",
-            description: "The requested address contains an invalid value. Check the link and try again."
-        },
-        "404": {
-            heading: "We couldn't find that analysis",
-            description: "The analysis or report you're looking for doesn't exist or is no longer available. Reports are kept only for the current session and are not stored."
-        },
-        "500": {
-            heading: "Something went wrong",
-            description: "The application ran into an unexpected problem. Try again in a moment."
-        }
-    };
-
-    errorPreviewButtons.forEach((button) => {
-        button.addEventListener("click", () => {
-            const status = button.dataset.errorPreview;
-            const state = states[status];
-            updateErrorPreview(status, state);
-
-            errorPreviewButtons.forEach((candidate) => {
-                const selected = candidate === button;
-                candidate.classList.toggle("is-selected", selected);
-                candidate.setAttribute("aria-pressed", String(selected));
-            });
-        });
-    });
-
-    function updateErrorPreview(status, state) {
-        errorStatus.textContent = status;
-        errorHeading.textContent = state.heading;
-        errorDescription.textContent = state.description;
-        document.title = `${status} · Git Contribution AI`;
-        if (!motionIsReduced) {
-            errorCard.classList.remove("is-state-refreshing");
-            window.requestAnimationFrame(() => errorCard.classList.add("is-state-refreshing"));
-        }
     }
 }
