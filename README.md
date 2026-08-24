@@ -35,6 +35,27 @@ Important: this tool supports contribution analysis, but it should not be treate
 - Optional email delivery of the report
 - Configurable limits for commit count, diff size, and execution time
 
+## Screens
+
+<table>
+  <tr>
+    <td width="50%"><img src="pics/home.png" alt="Почетна страница" /></td>
+    <td width="50%"><img src="pics/input.png" alt="Форма за внес" /></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="pics/Analysis%20screen.png" alt="Анализа - во тек" /></td>
+    <td width="50%"><img src="pics/analysis%20screen%20complete.png" alt="Анализа - завршено" /></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="pics/report%20screen.png" alt="Извештај" /></td>
+    <td width="50%"><img src="pics/report%20screen%202.png" alt="Извештај 2" /></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="pics/report%20screen%203.png" alt="Извештај 3" /></td>
+    <td width="50%"><img src="pics/report%20pdf.png" alt="PDF извештај" /></td>
+  </tr>
+</table>
+
 ## Tech stack
 
 - Java 21
@@ -114,6 +135,7 @@ The application has three main stages:
 │   └── test/
 │       └── java/                 # unit/integration tests
 ├── docs/
+├── pics/
 ├── README.md                    # this project documentation
 ├── .gitignore
 ```
