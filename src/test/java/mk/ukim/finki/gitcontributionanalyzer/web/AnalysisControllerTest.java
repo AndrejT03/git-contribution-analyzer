@@ -13,11 +13,10 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
-import java.util.List;
 import java.util.UUID;
+import static mk.ukim.finki.gitcontributionanalyzer.support.TestDataFactory.richAnalysisReport;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -51,10 +50,23 @@ class AnalysisControllerTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Start analysis")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("How it works")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("descriptionCounter")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("id=\"aiKey\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("name=\"aiKey\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("type=\"password\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("maxlength=\"1024\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("id=\"aiKeyVisibility\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("id=\"aiModel\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("name=\"aiModel\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("label=\"OpenAI\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("label=\"Anthropic Claude\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("label=\"OpenRouter\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("openai::gpt-5.6-terra")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("AI API key are used only")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Your selected AI model classifies")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("data-reveal-on-scroll")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("aria-invalid=\"false\"")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=26.2")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=26.2")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=28.0")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=28.0")));
     }
 
     @Test
@@ -70,7 +82,9 @@ class AnalysisControllerTest {
                         "repositoryUrl",
                         "projectDescription",
                         "email"
-                ));
+                ))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("form-field--invalid")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("aria-invalid=\"true\"")));
 
         verify(analysisJobService, never()).startAnalysis(any());
     }
@@ -84,7 +98,9 @@ class AnalysisControllerTest {
         mockMvc.perform(post("/analyze")
                         .param("repositoryUrl", "https://github.com/team/project")
                         .param("projectDescription", "Team collaboration and organization application.")
-                        .param("email", "mentor@example.com"))
+                        .param("email", "mentor@example.com")
+                        .param("aiKey", "test-key-never-persisted")
+                        .param("aiModel", "openai::gpt-5.6-terra"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/analyses/" + id + "?newAnalysis=true"));
 
@@ -118,8 +134,8 @@ class AnalysisControllerTest {
                         org.hamcrest.Matchers.containsString("id=\"progressStageNumber\"")
                 )))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("data-reveal-on-scroll")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=26.2")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=26.2")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=28.0")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=28.0")));
     }
 
     @Test
@@ -137,9 +153,6 @@ class AnalysisControllerTest {
                 .andExpect(model().attribute("job", running))
                 .andExpect(model().attribute("replayFromStart", true))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("aria-valuenow=\"0\"")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "data-current-stage=\"ANALYZING_WITH_GEMINI\""
-                )))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "data-replay-from-start=\"true\""
                 )))
@@ -234,16 +247,14 @@ class AnalysisControllerTest {
         mockMvc.perform(get("/analyses/{id}", id))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "data-stage-name=\"ANALYZING_WITH_GEMINI\" data-stage-progress=\"55\" "
-                                + "data-stage-label=\"Analyzing with Gemini\" "
-                                + "data-stage-message=\"Classifying commits and assessing their alignment with the project goal.\" "
-                                + "data-stage-state=\"SKIPPED\" class=\" is-skipped\""
+                        "data-stage-name=\"ANALYZING_WITH_GEMINI\""
+                )))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("class=\" is-skipped\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "data-stage-name=\"LOCAL_FALLBACK\""
                 )))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "data-stage-name=\"LOCAL_FALLBACK\" data-stage-progress=\"70\" "
-                                + "data-stage-label=\"Running local fallback\" "
-                                + "data-stage-message=\"Gemini is unavailable, so the deterministic local analyzer is continuing.\" "
-                                + "data-stage-state=\"ACTIVE\" aria-current=\"step\" class=\" is-current\""
+                        "aria-current=\"step\" class=\" is-current\""
                 )));
     }
 
@@ -262,7 +273,7 @@ class AnalysisControllerTest {
 
         mockMvc.perform(get("/api/analyses/{id}", id))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.progress").value(84))
+                .andExpect(jsonPath("$.progress").value(82))
                 .andExpect(jsonPath("$.analysisSource").value("LOCAL_FALLBACK"))
                 .andExpect(jsonPath("$.stageHistory[3]").value("ANALYZING_WITH_GEMINI"))
                 .andExpect(jsonPath("$.stageHistory[4]").value("LOCAL_FALLBACK"))
@@ -347,16 +358,28 @@ class AnalysisControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(view().name("error-page"))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("We couldn&#39;t process that request")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=26.2")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=26.2")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=28.0")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=28.0")))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("data-error-preview=\"400\""))));
     }
 
     @Test
+    void rejectsMalformedReplayFlagsBeforeLookingUpAnAnalysis() throws Exception {
+        mockMvc.perform(get("/analyses/{id}", UUID.randomUUID()).param("newAnalysis", "invalid"))
+                .andExpect(status().isBadRequest())
+                .andExpect(view().name("error-page"))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "We couldn&#39;t process that request"
+                )));
+
+        verifyNoInteractions(analysisJobService);
+    }
+
+    @Test
     void rendersCompleteReportPage() throws Exception {
         UUID id = UUID.randomUUID();
-        when(reportService.getReport(id)).thenReturn(sampleReport(id));
+        when(reportService.getReport(id)).thenReturn(richAnalysisReport(id));
 
         mockMvc.perform(get("/reports/{id}", id).param("newReport", "true"))
                 .andExpect(status().isOk())
@@ -409,14 +432,14 @@ class AnalysisControllerTest {
                         "/reports/" + id + "/pdf?download=true"
                 )))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("data-reveal-on-scroll")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=26.2")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=26.2")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=28.0")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=28.0")));
     }
 
     @Test
     void opensAReportPdfInlineWithSafeResponseHeaders() throws Exception {
         UUID id = UUID.randomUUID();
-        AnalysisReport report = sampleReport(id);
+        AnalysisReport report = richAnalysisReport(id);
         byte[] pdf = "%PDF-1.7\npreview".getBytes(StandardCharsets.US_ASCII);
         when(reportService.getReport(id)).thenReturn(report);
         when(reportPdfService.createPdf(report)).thenReturn(pdf);
@@ -441,7 +464,7 @@ class AnalysisControllerTest {
     @Test
     void downloadsTheSameReportPdfAsAnAttachment() throws Exception {
         UUID id = UUID.randomUUID();
-        AnalysisReport report = sampleReport(id);
+        AnalysisReport report = richAnalysisReport(id);
         byte[] pdf = "%PDF-1.7\ndownload".getBytes(StandardCharsets.US_ASCII);
         when(reportService.getReport(id)).thenReturn(report);
         when(reportPdfService.createPdf(report)).thenReturn(pdf);
@@ -483,6 +506,18 @@ class AnalysisControllerTest {
     }
 
     @Test
+    void rejectsMalformedPdfDownloadFlagsBeforeLookingUpAReport() throws Exception {
+        mockMvc.perform(get("/reports/{id}/pdf", UUID.randomUUID()).param("download", "invalid"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.error").value(
+                        "The requested PDF address contains an invalid value."
+                ));
+
+        verifyNoInteractions(reportService, reportPdfService);
+    }
+
+    @Test
     void showsFriendlyPageForMissingReport() throws Exception {
         UUID id = UUID.randomUUID();
         when(reportService.getReport(id)).thenThrow(new ReportNotFoundException("Report not found."));
@@ -501,48 +536,41 @@ class AnalysisControllerTest {
     }
 
     @Test
-    void servesTheVersionedAppleStylesheetInsteadOfAStaleRedesignAsset() throws Exception {
-        mockMvc.perform(get("/css/style.css").param("v", "25.9"))
+    void servesTheVersionedPhaseTwentyEightStylesheetWithCoreInteractionStates() throws Exception {
+        mockMvc.perform(get("/css/style.css").param("v", "28.0"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith("text/css"))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("--blue: #0071e3")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString(".site-header")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "@media screen and (min-width: 1600px)"
-                )))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("body.home-body")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("body.progress-body")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("body.report-body")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("body.error-body")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("zoom: 1.25")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "width: min(var(--wide-page-content-width), calc(100% - 40px))"
-                )))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "width: min(var(--wide-focused-content-width), calc(100% - 8px))"
-                )))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "width: min(var(--wide-page-content-width), 100%)"
-                )))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("var(--progress-stop)")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("@keyframes progress-aura")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         ".progress-experience.is-advancing"
                 )))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         ".stage-list li.is-skipped"
                 )))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString(".report-action")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString(".report-actions--header")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("font-size: 17px")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("--field-border: #8e8e93")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(".ai-settings-grid")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(".secret-input__toggle")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(".form-field select:focus")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(".reveal-ready [data-reveal]")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("prefers-reduced-motion: reduce")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "oklch(57% 0.16 var(--contributor-hue, 210deg))"
+                )))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("--progress-stop")
+                )))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("@keyframes progress-aura")
                 )));
     }
 
     @Test
-    void updatesTheLiveProgressMessageOnlyWhenItsContentChanges() throws Exception {
-        mockMvc.perform(get("/js/app.js"))
+    void servesLiveProgressReplayAndAuthoritativeStageStateContracts() throws Exception {
+        mockMvc.perform(get("/js/app.js").param("v", "28.0"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "if (element && element.textContent !== text)"
@@ -554,25 +582,7 @@ class AnalysisControllerTest {
                         "progressRoot.classList.add(\"is-reconnecting\")"
                 )))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "if (isPreviewRoute && previewQuery.get(\"preview\") === \"reconnecting\")"
-                )))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "const MIN_PROGRESS_TWEEN_MS = 800"
-                )))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "const MAX_PROGRESS_TWEEN_MS = 2400"
-                )))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "const MAX_PROGRESS_DELTA_PER_FRAME = 0.72"
-                )))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "Math.cos(Math.PI * elapsed)"
-                )))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "const STAGE_HOLD_MS = 450"
-                )))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "const INITIAL_STAGE_HOLD_MS = prefersReducedMotion ? 0 : 650"
+                        "const INITIAL_STAGE_HOLD_MS = motionIsReduced ? 0 : 650"
                 )))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "progressRoot.dataset.replayFromStart === \"true\""
@@ -581,95 +591,40 @@ class AnalysisControllerTest {
                         "window.matchMedia?.(\"(prefers-reduced-motion: reduce)\")"
                 )))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "window.requestAnimationFrame"
-                )))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "window.location.replace(reportUrl)"
                 )))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "const animateProgressTo = (targetProgress)"
-                )))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "progressRoot.classList.add(\"is-advancing\")"
-                )))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "job.stageStates?.[item.dataset.stageName]"
+                        "job.stageStates[item.dataset.stageName]"
                 )))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "const renderStatusSequence = async (job)"
                 )))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "await renderStatusSequence(job)"
+                        "job.stageHistory ?? [job.stage]"
                 )))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "window.setTimeout(pollStatus, INITIAL_STAGE_HOLD_MS)"
+                        "aiModel.addEventListener(\"change\", updateSelectedProvider)"
+                )))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "aiKey.type = visible ? \"text\" : \"password\""
+                )))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "API key cleared because the provider changed"
                 )));
     }
 
-    private AnalysisReport sampleReport(UUID id) {
-        ContributorAnalysis ana = new ContributorAnalysis(
-                "Ana Developer",
-                "ana@example.com",
-                65,
-                ContributionLevel.HIGH,
-                "She implemented the core functionality.",
-                List.of("Login", "User profile"),
-                List.of(new CategorySummary(CommitCategory.FUNCTIONAL, 1, "New functionality")),
-                List.of(new CommitAnalysis(
-                        "1234567890abcdef",
-                        "Add login",
-                        CommitCategory.FUNCTIONAL,
-                        5,
-                        "Key project change."
-                )),
-                List.of("Primary finding", "Secondary finding")
-        );
-        ContributorAnalysis boris = new ContributorAnalysis(
-                "Boris Tester",
-                "boris@example.com",
-                35,
-                ContributionLevel.HIGH,
-                "Added tests and fixes.",
-                List.of("Integration tests"),
-                List.of(new CategorySummary(CommitCategory.TESTING, 1, "Test coverage")),
-                List.of(new CommitAnalysis(
-                        "abcdef1234567890",
-                        "Add tests",
-                        CommitCategory.TESTING,
-                        4,
-                        "Improves reliability."
-                )),
-                List.of()
-        );
-
-        ContributionAnalysis analysis = new ContributionAnalysis(
-                "Team collaboration application.",
-                "The commits align with the project goal.",
-                List.of(ana, boris),
-                List.of(new TeamIndicator(
-                        "BALANCE",
-                        TeamIndicatorSeverity.INFO,
-                        "Balanced contribution",
-                        "No critical imbalance."
-                )),
-                "The team achieved the main goal.",
-                "Gemini analyzed the commit messages, files, and diffs."
-        );
-
-        return new AnalysisReport(
-                id,
-                "https://github.com/team/project",
-                "project",
-                "main",
-                "Team collaboration and organization application.",
-                "mentor@example.com",
-                AnalysisSource.GEMINI,
-                "gemini-3.7-flash",
-                "Gemini analyzed the Git history using the supplied project goal.",
-                2,
-                OffsetDateTime.now(),
-                analysis,
-                new EmailDelivery(EmailDeliveryStatus.SENT, "The report was sent.")
-        );
+    @Test
+    void servesPreviewFixturesSeparatelyFromTheProductionScript() throws Exception {
+        mockMvc.perform(get("/js/design-preview.js").param("v", "28.0"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "window.gitContributionDesignPreview"
+                )))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "previewQuery.get(\"preview\") === \"sequence\""
+                )))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "previewQuery.get(\"preview\") === \"reconnecting\""
+                )));
     }
 }

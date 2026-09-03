@@ -79,8 +79,64 @@ if (description && descriptionCounter) {
     description.addEventListener("input", updateDescriptionCounter);
 }
 
+const aiKey = document.getElementById("aiKey");
+const aiKeyHint = document.getElementById("aiKeyHint");
+const aiKeyVisibility = document.getElementById("aiKeyVisibility");
+const aiModel = document.getElementById("aiModel");
+const selectedProvider = document.getElementById("selectedProvider");
+const aiKeyVisibilityIcon = aiKeyVisibility?.querySelector("i");
+
+const setAiKeyVisibility = (visible) => {
+    if (!aiKey || !aiKeyVisibility) {
+        return;
+    }
+
+    aiKey.type = visible ? "text" : "password";
+    aiKeyVisibility.setAttribute("aria-pressed", String(visible));
+    aiKeyVisibility.setAttribute("aria-label", visible ? "Hide API key" : "Show API key");
+    aiKeyVisibilityIcon?.classList.toggle("bi-eye", !visible);
+    aiKeyVisibilityIcon?.classList.toggle("bi-eye-slash", visible);
+};
+
+if (aiKey && aiKeyHint && aiModel && selectedProvider) {
+    let activeProvider = "";
+
+    const updateSelectedProvider = () => {
+        const selectedOption = aiModel.selectedOptions[0];
+        const provider = selectedOption?.dataset.provider ?? "";
+        const providerChanged = Boolean(activeProvider && provider && activeProvider !== provider);
+        const keyWasCleared = providerChanged && aiKey.value.length > 0;
+
+        if (providerChanged) {
+            aiKey.value = "";
+            setAiKeyVisibility(false);
+        }
+
+        activeProvider = provider;
+        selectedProvider.hidden = provider.length === 0;
+        selectedProvider.textContent = provider;
+        aiKey.placeholder = selectedOption?.dataset.keyPlaceholder ?? "Paste your provider API key";
+        aiKeyHint.textContent = keyWasCleared
+            ? `API key cleared because the provider changed. Use an API key from ${provider}.`
+            : provider
+                ? `Use an API key from ${provider}.`
+                : "Choose a model to see which provider key is required.";
+    };
+
+    updateSelectedProvider();
+    aiModel.addEventListener("change", updateSelectedProvider);
+}
+
+if (aiKey && aiKeyVisibility) {
+    aiKeyVisibility.addEventListener("click", () => {
+        const keyIsVisible = aiKey.type === "text";
+        setAiKeyVisibility(!keyIsVisible);
+        aiKey.focus({ preventScroll: true });
+    });
+}
+
 if (form) {
-    const controls = Array.from(form.querySelectorAll("input, textarea"));
+    const controls = Array.from(form.querySelectorAll("input, textarea, select"));
     const markInvalid = (control) => {
         control.closest(".form-field")?.classList.add("form-field--invalid");
         control.setAttribute("aria-invalid", "true");
@@ -97,6 +153,7 @@ if (form) {
     controls.forEach((control) => {
         control.addEventListener("invalid", () => markInvalid(control));
         control.addEventListener("input", () => clearInvalidWhenValid(control));
+        control.addEventListener("change", () => clearInvalidWhenValid(control));
         control.addEventListener("blur", () => {
             if (!control.validity.valid) {
                 markInvalid(control);
@@ -114,17 +171,6 @@ if (form) {
         button.disabled = true;
         button.textContent = "Starting analysis…";
         overlay.hidden = false;
-    });
-}
-
-// Double-click the email field to insert the suggested address (you@example.com)
-const emailInput = document.getElementById("email");
-if (emailInput) {
-    emailInput.addEventListener("dblclick", () => {
-        // Insert suggested email on double click and notify any listeners
-        emailInput.value = "you@example.com";
-        emailInput.dispatchEvent(new Event("input", { bubbles: true }));
-        emailInput.focus();
     });
 }
 
