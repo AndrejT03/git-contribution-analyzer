@@ -23,24 +23,21 @@ public class ReportServiceImpl implements ReportService {
     private static final Logger LOGGER = LoggerFactory.getLogger(ReportServiceImpl.class);
 
     private final GitRepositoryService gitRepositoryService;
-    private final GeminiAnalysisService geminiAnalysisService;
+    private final AiAnalysisService aiAnalysisService;
     private final LocalAnalysisService localAnalysisService;
     private final AnalysisReportRepository reportRepository;
-    private final AppSettings settings;
     private final EmailReportService emailReportService;
 
     public ReportServiceImpl(
             GitRepositoryService gitRepositoryService,
-            GeminiAnalysisService geminiAnalysisService,
+            AiAnalysisService aiAnalysisService,
             LocalAnalysisService localAnalysisService,
             AnalysisReportRepository reportRepository,
-            AppSettings settings,
             EmailReportService emailReportService) {
         this.gitRepositoryService = gitRepositoryService;
-        this.geminiAnalysisService = geminiAnalysisService;
+        this.aiAnalysisService = aiAnalysisService;
         this.localAnalysisService = localAnalysisService;
         this.reportRepository = reportRepository;
-        this.settings = settings;
         this.emailReportService = emailReportService;
     }
 
@@ -50,9 +47,15 @@ public class ReportServiceImpl implements ReportService {
             AnalysisProgressListener progressListener) {
         Objects.requireNonNull(progressListener, "progressListener");
 
+        AiProviderSelection providerSelection = AiProviderSelection.parse(request.aiModel());
         progressListener.onStage(READING_REPOSITORY);
         RepositoryData repository = gitRepositoryService.readRepository(request.repositoryUrl());
-        AnalysisOutcome outcome = analyzeWithFallback(request, repository, progressListener);
+        AnalysisOutcome outcome = analyzeWithFallback(
+                request,
+                repository,
+                providerSelection,
+                progressListener
+        );
 
         progressListener.onStage(PREPARING_REPORT);
         AnalysisReport report = createPendingReport(request, repository, outcome);
@@ -69,23 +72,28 @@ public class ReportServiceImpl implements ReportService {
     private AnalysisOutcome analyzeWithFallback(
             AnalysisRequest request,
             RepositoryData repository,
+            AiProviderSelection providerSelection,
             AnalysisProgressListener progressListener) {
         try {
-            progressListener.onStage(ANALYZING_WITH_GEMINI);
-            ContributionAnalysis analysis = geminiAnalysisService.analyze(
+            progressListener.onStage(ANALYZING_WITH_AI);
+            ContributionAnalysis analysis = aiAnalysisService.analyze(
                     request.projectDescription(),
-                    repository
+                    repository,
+                    providerSelection,
+                    request.aiKey()
             );
-            progressListener.onAnalysisSource(AnalysisSource.GEMINI);
+            progressListener.onAnalysisSource(AnalysisSource.AI_PROVIDER);
             return new AnalysisOutcome(
                     analysis,
-                    AnalysisSource.GEMINI,
-                    settings.geminiModel(),
-                    "Gemini analyzed the Git history using the supplied project goal."
+                    AnalysisSource.AI_PROVIDER,
+                    providerSelection.provider().displayName() + " · " + providerSelection.model(),
+                    providerSelection.provider().displayName()
+                            + " analyzed the Git history using the supplied project goal."
             );
-        } catch (GeminiException exception) {
+        } catch (AiProviderException exception) {
             LOGGER.warn(
-                    "Gemini analysis failed; using the local fallback. Category: {}, reason: {}",
+                    "AI provider analysis failed; using the local fallback. Provider: {}, category: {}, reason: {}",
+                    providerSelection.provider().namespace(),
                     exception.category(),
                     exception.reason()
             );
@@ -98,7 +106,7 @@ public class ReportServiceImpl implements ReportService {
             return new AnalysisOutcome(
                     analysis,
                     AnalysisSource.LOCAL_FALLBACK,
-                    "On-device analysis",
+                    "Built-in heuristic rules",
                     exception.userMessage()
                             + " This report was generated with the built-in local heuristic analyzer."
             );
@@ -141,6 +149,14 @@ public class ReportServiceImpl implements ReportService {
     @Override
     public AnalysisReport getReport(UUID id) {
         return reportRepository.findById(id)
-                .orElseThrow(() ->  new ReportNotFoundException("The report was not found, or the application was restarted."));
+                .orElseThrow(() -> new ReportNotFoundException("The report was not found, or the application was restarted."));
+    }
+
+    private record AnalysisOutcome(
+            ContributionAnalysis analysis,
+            AnalysisSource source,
+            String model,
+            String notice
+    ) {
     }
 }

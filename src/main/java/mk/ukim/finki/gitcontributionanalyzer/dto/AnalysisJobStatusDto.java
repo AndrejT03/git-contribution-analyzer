@@ -45,8 +45,8 @@ public record AnalysisJobStatusDto(
     private static Map<AnalysisStage, AnalysisStageState> stageStates(AnalysisJob job) {
         EnumMap<AnalysisStage, AnalysisStageState> states = new EnumMap<>(AnalysisStage.class);
         AnalysisStage skippedStage = switch (job.analysisSource()) {
-            case GEMINI -> AnalysisStage.LOCAL_FALLBACK;
-            case LOCAL_FALLBACK -> AnalysisStage.ANALYZING_WITH_GEMINI;
+            case AI_PROVIDER -> AnalysisStage.LOCAL_FALLBACK;
+            case LOCAL_FALLBACK -> AnalysisStage.ANALYZING_WITH_AI;
             case null -> null;
         };
 

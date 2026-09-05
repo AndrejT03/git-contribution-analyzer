@@ -16,15 +16,15 @@ public enum AnalysisStage {
             "Reading Git history",
             "Cloning history and collecting commits, authors, and diffs."
     ),
-    ANALYZING_WITH_GEMINI(
+    ANALYZING_WITH_AI(
             55,
-            "Analyzing with Gemini",
+            "Analyzing with AI",
             "Classifying commits and assessing their alignment with the project goal."
     ),
     LOCAL_FALLBACK(
             70,
             "Running local fallback",
-            "Gemini is unavailable, so the deterministic local analyzer is continuing."
+            "The selected AI provider is unavailable, so the deterministic local analyzer is continuing."
     ),
     PREPARING_REPORT(
             84,

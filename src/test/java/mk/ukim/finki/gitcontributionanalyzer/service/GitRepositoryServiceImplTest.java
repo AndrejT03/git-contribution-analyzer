@@ -25,8 +25,6 @@ class GitRepositoryServiceImplTest {
                 80,
                 6000,
                 30,
-                "",
-                "gemini-3.7-flash",
                 180,
                 false,
                 ""

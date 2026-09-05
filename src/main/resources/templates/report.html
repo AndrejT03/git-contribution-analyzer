@@ -40,7 +40,7 @@
         <div class="report-badges">
             <span class="report-badge report-badge--source">
                 <i class="bi bi-stars" aria-hidden="true"></i>
-                <span th:text="${report.analysisSource.displayName()} + ' Report'">Gemini AI Report</span>
+                <span th:text="${report.analysisSource.displayName()} + ' Report'">AI provider Report</span>
             </span>
             <span class="report-badge report-badge--branch">
                 <i class="bi bi-bezier2" aria-hidden="true"></i>
@@ -59,7 +59,7 @@
             </div>
             <div>
                 <dt>Analysis engine</dt>
-                <dd th:text="${report.analysisModel}">Gemini 2.5 Pro</dd>
+                <dd th:text="${report.analysisModel}">Provider · model</dd>
             </div>
             <div>
                 <dt>Generated</dt>

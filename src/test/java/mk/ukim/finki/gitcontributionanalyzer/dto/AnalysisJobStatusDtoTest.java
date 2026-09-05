@@ -1,19 +1,20 @@
-package mk.ukim.finki.gitcontributionanalyzer.enums;
-import mk.ukim.finki.gitcontributionanalyzer.dto.AnalysisJobStatusDto;
+package mk.ukim.finki.gitcontributionanalyzer.dto;
+import mk.ukim.finki.gitcontributionanalyzer.enums.AnalysisSource;
+import mk.ukim.finki.gitcontributionanalyzer.enums.AnalysisStage;
+import mk.ukim.finki.gitcontributionanalyzer.enums.AnalysisStageState;
 import mk.ukim.finki.gitcontributionanalyzer.model.AnalysisJob;
 import org.junit.jupiter.api.Test;
 import java.time.OffsetDateTime;
-import java.util.Comparator;
 import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
-class AnalysisJobTest {
+class AnalysisJobStatusDtoTest {
 
     private static final OffsetDateTime STARTED_AT = OffsetDateTime.parse("2026-08-10T12:00:00Z");
 
     @Test
-    void marksGeminiSkippedWhileLocalFallbackIsActive() {
-        AnalysisJob job = jobAtGeminiStage()
+    void marksAiProviderSkippedWhileLocalFallbackIsActive() {
+        AnalysisJob job = jobAtAiProviderStage()
                 .advanceTo(AnalysisStage.LOCAL_FALLBACK, STARTED_AT.plusSeconds(4));
 
         AnalysisJobStatusDto status = AnalysisJobStatusDto.from(job);
@@ -34,7 +35,7 @@ class AnalysisJobTest {
 
     @Test
     void keepsTheFallbackPathAccurateAfterLaterStagesAndCompletion() {
-        AnalysisJob job = jobAtGeminiStage()
+        AnalysisJob job = jobAtAiProviderStage()
                 .advanceTo(AnalysisStage.LOCAL_FALLBACK, STARTED_AT.plusSeconds(4))
                 .advanceTo(AnalysisStage.PREPARING_REPORT, STARTED_AT.plusSeconds(5))
                 .complete(UUID.randomUUID(), AnalysisSource.LOCAL_FALLBACK, STARTED_AT.plusSeconds(6));
@@ -49,8 +50,8 @@ class AnalysisJobTest {
     }
 
     @Test
-    void marksLocalFallbackSkippedWhenGeminiProducesTheReport() {
-        AnalysisJob job = jobAtGeminiStage()
+    void marksLocalFallbackSkippedWhenAiProviderProducesTheReport() {
+        AnalysisJob job = jobAtAiProviderStage()
                 .selectAnalysisSource(AnalysisSource.AI_PROVIDER, STARTED_AT.plusSeconds(4))
                 .advanceTo(AnalysisStage.PREPARING_REPORT, STARTED_AT.plusSeconds(5));
 
@@ -62,7 +63,7 @@ class AnalysisJobTest {
                 .containsEntry(AnalysisStage.PREPARING_REPORT, AnalysisStageState.ACTIVE);
     }
 
-    private AnalysisJob jobAtGeminiStage() {
+    private AnalysisJob jobAtAiProviderStage() {
         return AnalysisJob.queued(UUID.randomUUID(), "team/project", STARTED_AT)
                 .advanceTo(AnalysisStage.STARTING, STARTED_AT.plusSeconds(1))
                 .advanceTo(AnalysisStage.READING_REPOSITORY, STARTED_AT.plusSeconds(2))

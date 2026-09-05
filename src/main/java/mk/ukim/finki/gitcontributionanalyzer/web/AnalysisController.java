@@ -57,8 +57,16 @@ public class AnalysisController {
             BindingResult bindingResult,
             Model model,
             HttpServletResponse response) {
+        response.setHeader(HttpHeaders.CACHE_CONTROL, CacheControl.noStore().getHeaderValue());
 
         if (bindingResult.hasErrors()) {
+            if (!bindingResult.hasFieldErrors("aiKey")) {
+                bindingResult.rejectValue(
+                        "aiKey",
+                        "analysisRequest.aiKey.reenter",
+                        "Enter the AI API key again."
+                );
+            }
             return "index";
         }
 

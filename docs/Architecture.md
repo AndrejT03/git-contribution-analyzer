@@ -43,8 +43,8 @@ The POST request returns quickly with an analysis URL. A worker performs the lon
 
 - `AnalysisJobServiceImpl` receives an immutable `AnalysisRequestDto`, submits it to the bounded executor, advances its lifecycle, and converts internal failures to safe browser messages;
 - `GitRepositoryServiceImpl` validates URLs, performs a complete clone, extracts commits and changed-file objects, and removes temporary files;
-- `GeminiPromptBuilder` converts the project goal and Git records into a controlled prompt;
-- `GeminiAnalysisServiceImpl` calls Gemini, applies Jakarta Bean Validation to its structured response, retains the cross-field/domain checks, and maps provider failures to stable internal reasons;
+- `AiPromptBuilder` converts the project goal and Git records into a controlled prompt;
+- `AiAnalysisServiceImpl` calls Gemini, applies Jakarta Bean Validation to its structured response, retains the cross-field/domain checks, and maps provider failures to stable internal reasons;
 - `LocalCommitClassifier` applies deterministic commit categories and importance rules;
 - `LocalAnalysisServiceImpl` groups commits, calculates local percentages, and creates indicators;
 - `ReportServiceImpl` selects Gemini first, catches only `GeminiException` for fallback, saves the report for the browser, and then attempts optional email delivery;
@@ -76,8 +76,8 @@ All closed domains are centralized in `mk.ukim.finki.gitcontributor.enums`; free
 | `TeamIndicatorSeverity` | `INFO`, `WARNING`, and `CRITICAL`; `cssClass()` preserves lowercase report styles |
 | `AnalysisSource` | Gemini or local fallback; `displayName()` preserves the report/email labels |
 | `EmailDeliveryStatus` | Pending, disabled, sent, or failed; `cssClass()` preserves delivery-note styling |
-| `GeminiFailureCategory` | Broad, stable grouping of provider failure reasons |
-| `GeminiFailureReason` | Concrete safe fallback reason with `category()` and `userMessage()` metadata |
+| `AiFailureCategory` | Broad, stable grouping of provider failure reasons |
+| `AiFailureReason` | Concrete safe fallback reason with `category()` and `userMessage()` metadata |
 | `AnalysisJobStatus` | Queued/running/completed/failed job lifecycle |
 | `AnalysisStage` | Stage percentage, label, and privacy-safe message returned by `progress()`, `label()`, and `message()` |
 | `AnalysisStageState` | Pending/active/complete/skipped checklist state published for every stage |

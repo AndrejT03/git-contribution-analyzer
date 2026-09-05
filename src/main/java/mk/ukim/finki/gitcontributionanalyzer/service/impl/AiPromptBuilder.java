@@ -1,6 +1,6 @@
 package mk.ukim.finki.gitcontributionanalyzer.service.impl;
 import mk.ukim.finki.gitcontributionanalyzer.enums.*;
-import mk.ukim.finki.gitcontributionanalyzer.exception.GeminiException;
+import mk.ukim.finki.gitcontributionanalyzer.exception.AiProviderException;
 import mk.ukim.finki.gitcontributionanalyzer.model.RepositoryData;
 import org.springframework.stereotype.Component;
 import tools.jackson.core.JacksonException;
@@ -9,7 +9,7 @@ import java.util.Arrays;
 import java.util.stream.Collectors;
 
 @Component
-public class GeminiPromptBuilder {
+public class AiPromptBuilder {
 
     private static final String COMMIT_CATEGORIES = enumNames(CommitCategory.values());
     private static final String CONTRIBUTION_LEVELS = enumNames(ContributionLevel.values());
@@ -17,7 +17,7 @@ public class GeminiPromptBuilder {
 
     private final ObjectMapper objectMapper;
 
-    public GeminiPromptBuilder(ObjectMapper objectMapper) {
+    public AiPromptBuilder(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 
@@ -97,7 +97,7 @@ public class GeminiPromptBuilder {
                     repositoryJson
             );
         } catch (JacksonException exception) {
-            throw new GeminiException(GeminiFailureReason.REQUEST_PREPARATION_FAILED, exception);
+            throw new AiProviderException(AiFailureReason.REQUEST_PREPARATION_FAILED, exception);
         }
     }
 

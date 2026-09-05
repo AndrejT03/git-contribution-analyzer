@@ -1,6 +1,6 @@
 package mk.ukim.finki.gitcontributionanalyzer.enums;
 
-public enum GeminiFailureCategory {
+public enum AiFailureCategory {
     CONFIGURATION,
     REQUEST,
     AUTHENTICATION,

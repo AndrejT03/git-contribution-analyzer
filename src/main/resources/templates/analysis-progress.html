@@ -67,7 +67,7 @@
                     <span class="stage-label" th:text="${stage.label}">Queued</span>
                     <span class="stage-badges" aria-hidden="true">
                         <span class="stage-badge stage-badge--ai"
-                              th:if="${stage.name() == 'ANALYZING_WITH_GEMINI'}">AI</span>
+                              th:if="${stage.name() == 'ANALYZING_WITH_AI'}">AI</span>
                         <span class="stage-badge stage-badge--fallback"
                               th:if="${stage.name() == 'LOCAL_FALLBACK'}">Fallback</span>
                         <span class="stage-badge stage-badge--running">running</span>
@@ -80,7 +80,7 @@
             <p class="progress-footnote">
                 <i class="bi bi-info-circle" aria-hidden="true"></i>
                 <span><strong>Progress follows real work.</strong> A stage is active while it runs and complete when
-                    processing moves on. If Gemini is unavailable, local fallback starts automatically.</span>
+                    processing moves on. If the selected AI provider is unavailable, local fallback starts automatically.</span>
             </p>
         </section>
 

@@ -65,8 +65,8 @@ class AnalysisControllerTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Your selected AI model classifies")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("data-reveal-on-scroll")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("aria-invalid=\"false\"")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=28.0")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=28.0")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=29.0")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=29.0")));
     }
 
     @Test
@@ -81,7 +81,9 @@ class AnalysisControllerTest {
                         "analysisRequest",
                         "repositoryUrl",
                         "projectDescription",
-                        "email"
+                        "email",
+                        "aiKey",
+                        "aiModel"
                 ))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("form-field--invalid")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("aria-invalid=\"true\"")));
@@ -102,17 +104,48 @@ class AnalysisControllerTest {
                         .param("aiKey", "test-key-never-persisted")
                         .param("aiModel", "openai::gpt-5.6-terra"))
                 .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Cache-Control", "no-store"))
                 .andExpect(redirectedUrl("/analyses/" + id + "?newAnalysis=true"));
 
-        verify(analysisJobService).startAnalysis(any());
+        verify(analysisJobService).startAnalysis(argThat(request ->
+                request.aiKey().equals("test-key-never-persisted")
+                        && request.aiModel().equals("openai::gpt-5.6-terra")
+        ));
         verifyNoInteractions(reportService);
+    }
+
+    @Test
+    void rejectsAnUnknownModelWithoutEchoingTheSubmittedApiKey() throws Exception {
+        String secret = "secret-that-must-not-be-rendered";
+
+        mockMvc.perform(post("/analyze")
+                        .param("repositoryUrl", "https://github.com/team/project")
+                        .param("projectDescription", "Team collaboration and organization application.")
+                        .param("email", "mentor@example.com")
+                        .param("aiKey", secret)
+                        .param("aiModel", "openai::not-a-real-model"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", "no-store"))
+                .andExpect(view().name("index"))
+                .andExpect(model().attributeHasFieldErrors("analysisRequest", "aiModel"))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "Choose a supported AI provider and model."
+                )))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "Enter the AI API key again."
+                )))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString(secret)
+                )));
+
+        verify(analysisJobService, never()).startAnalysis(any());
     }
 
     @Test
     void rendersAnAccessibleLiveProgressPage() throws Exception {
         UUID id = UUID.randomUUID();
         AnalysisJob running = AnalysisJob.queued(id, "orbital-labs/flightdeck", OffsetDateTime.now())
-                .advanceTo(AnalysisStage.ANALYZING_WITH_GEMINI, OffsetDateTime.now());
+                .advanceTo(AnalysisStage.ANALYZING_WITH_AI, OffsetDateTime.now());
         when(analysisJobService.findById(id)).thenReturn(java.util.Optional.of(running));
 
         mockMvc.perform(get("/analyses/{id}", id))
@@ -123,7 +156,7 @@ class AnalysisControllerTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("aria-valuenow=\"55\"")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("orbital-labs/flightdeck")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("data-stage-name=\"COMPLETED\"")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Analyzing with Gemini")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Analyzing with AI")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "Progress follows real work."
                 )))
@@ -134,8 +167,8 @@ class AnalysisControllerTest {
                         org.hamcrest.Matchers.containsString("id=\"progressStageNumber\"")
                 )))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("data-reveal-on-scroll")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=28.0")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=28.0")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=29.0")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=29.0")));
     }
 
     @Test
@@ -144,7 +177,7 @@ class AnalysisControllerTest {
         AnalysisJob running = AnalysisJob.queued(id, "orbital-labs/flightdeck", OffsetDateTime.now())
                 .advanceTo(AnalysisStage.STARTING, OffsetDateTime.now())
                 .advanceTo(AnalysisStage.READING_REPOSITORY, OffsetDateTime.now())
-                .advanceTo(AnalysisStage.ANALYZING_WITH_GEMINI, OffsetDateTime.now());
+                .advanceTo(AnalysisStage.ANALYZING_WITH_AI, OffsetDateTime.now());
         when(analysisJobService.findById(id)).thenReturn(java.util.Optional.of(running));
 
         mockMvc.perform(get("/analyses/{id}", id).param("newAnalysis", "true"))
@@ -195,8 +228,8 @@ class AnalysisControllerTest {
         AnalysisJob completed = AnalysisJob.queued(id, "team/project", now)
                 .advanceTo(AnalysisStage.STARTING, now.plusSeconds(1))
                 .advanceTo(AnalysisStage.READING_REPOSITORY, now.plusSeconds(2))
-                .advanceTo(AnalysisStage.ANALYZING_WITH_GEMINI, now.plusSeconds(3))
-                .complete(reportId, AnalysisSource.GEMINI, now.plusSeconds(4));
+                .advanceTo(AnalysisStage.ANALYZING_WITH_AI, now.plusSeconds(3))
+                .complete(reportId, AnalysisSource.AI_PROVIDER, now.plusSeconds(4));
         when(analysisJobService.findById(id)).thenReturn(java.util.Optional.of(completed));
 
         mockMvc.perform(get("/analyses/{id}", id).param("newAnalysis", "true"))
@@ -233,13 +266,13 @@ class AnalysisControllerTest {
     }
 
     @Test
-    void rendersGeminiAsSkippedAndLocalFallbackAsActive() throws Exception {
+    void rendersAiProviderAsSkippedAndLocalFallbackAsActive() throws Exception {
         UUID id = UUID.randomUUID();
         OffsetDateTime now = OffsetDateTime.now();
         AnalysisJob fallback = AnalysisJob.queued(id, "team/project", now)
                 .advanceTo(AnalysisStage.STARTING, now.plusSeconds(1))
                 .advanceTo(AnalysisStage.READING_REPOSITORY, now.plusSeconds(2))
-                .advanceTo(AnalysisStage.ANALYZING_WITH_GEMINI, now.plusSeconds(3))
+                .advanceTo(AnalysisStage.ANALYZING_WITH_AI, now.plusSeconds(3))
                 .selectAnalysisSource(AnalysisSource.LOCAL_FALLBACK, now.plusSeconds(4))
                 .advanceTo(AnalysisStage.LOCAL_FALLBACK, now.plusSeconds(5));
         when(analysisJobService.findById(id)).thenReturn(java.util.Optional.of(fallback));
@@ -247,7 +280,7 @@ class AnalysisControllerTest {
         mockMvc.perform(get("/analyses/{id}", id))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "data-stage-name=\"ANALYZING_WITH_GEMINI\""
+                        "data-stage-name=\"ANALYZING_WITH_AI\""
                 )))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("class=\" is-skipped\"")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
@@ -265,7 +298,7 @@ class AnalysisControllerTest {
         AnalysisJob fallback = AnalysisJob.queued(id, "team/project", now)
                 .advanceTo(AnalysisStage.STARTING, now.plusSeconds(1))
                 .advanceTo(AnalysisStage.READING_REPOSITORY, now.plusSeconds(2))
-                .advanceTo(AnalysisStage.ANALYZING_WITH_GEMINI, now.plusSeconds(3))
+                .advanceTo(AnalysisStage.ANALYZING_WITH_AI, now.plusSeconds(3))
                 .selectAnalysisSource(AnalysisSource.LOCAL_FALLBACK, now.plusSeconds(4))
                 .advanceTo(AnalysisStage.LOCAL_FALLBACK, now.plusSeconds(5))
                 .advanceTo(AnalysisStage.PREPARING_REPORT, now.plusSeconds(6));
@@ -273,11 +306,11 @@ class AnalysisControllerTest {
 
         mockMvc.perform(get("/api/analyses/{id}", id))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.progress").value(82))
+                .andExpect(jsonPath("$.progress").value(84))
                 .andExpect(jsonPath("$.analysisSource").value("LOCAL_FALLBACK"))
-                .andExpect(jsonPath("$.stageHistory[3]").value("ANALYZING_WITH_GEMINI"))
+                .andExpect(jsonPath("$.stageHistory[3]").value("ANALYZING_WITH_AI"))
                 .andExpect(jsonPath("$.stageHistory[4]").value("LOCAL_FALLBACK"))
-                .andExpect(jsonPath("$.stageStates.ANALYZING_WITH_GEMINI").value("SKIPPED"))
+                .andExpect(jsonPath("$.stageStates.ANALYZING_WITH_AI").value("SKIPPED"))
                 .andExpect(jsonPath("$.stageStates.LOCAL_FALLBACK").value("COMPLETE"))
                 .andExpect(jsonPath("$.stageStates.PREPARING_REPORT").value("ACTIVE"));
     }
@@ -290,10 +323,10 @@ class AnalysisControllerTest {
         AnalysisJob completed = AnalysisJob.queued(id, now)
                 .advanceTo(AnalysisStage.STARTING, now.plusSeconds(1))
                 .advanceTo(AnalysisStage.READING_REPOSITORY, now.plusSeconds(2))
-                .advanceTo(AnalysisStage.ANALYZING_WITH_GEMINI, now.plusSeconds(3))
-                .selectAnalysisSource(AnalysisSource.GEMINI, now.plusSeconds(4))
+                .advanceTo(AnalysisStage.ANALYZING_WITH_AI, now.plusSeconds(3))
+                .selectAnalysisSource(AnalysisSource.AI_PROVIDER, now.plusSeconds(4))
                 .advanceTo(AnalysisStage.PREPARING_REPORT, now.plusSeconds(5))
-                .complete(reportId, AnalysisSource.GEMINI, now.plusSeconds(6));
+                .complete(reportId, AnalysisSource.AI_PROVIDER, now.plusSeconds(6));
         when(analysisJobService.findById(id)).thenReturn(java.util.Optional.of(completed));
 
         mockMvc.perform(get("/api/analyses/{id}", id))
@@ -301,7 +334,7 @@ class AnalysisControllerTest {
                 .andExpect(header().string("Cache-Control", "no-store"))
                 .andExpect(jsonPath("$.status").value("COMPLETED"))
                 .andExpect(jsonPath("$.progress").value(100))
-                .andExpect(jsonPath("$.stageStates.ANALYZING_WITH_GEMINI").value("COMPLETE"))
+                .andExpect(jsonPath("$.stageStates.ANALYZING_WITH_AI").value("COMPLETE"))
                 .andExpect(jsonPath("$.stageStates.LOCAL_FALLBACK").value("SKIPPED"))
                 .andExpect(jsonPath("$.reportUrl")
                         .value("/reports/" + reportId + "?newReport=true"));
@@ -358,8 +391,8 @@ class AnalysisControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(view().name("error-page"))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("We couldn&#39;t process that request")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=28.0")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=28.0")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=29.0")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=29.0")))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("data-error-preview=\"400\""))));
     }
@@ -407,7 +440,7 @@ class AnalysisControllerTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("65%")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("High")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Final contribution assessment")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Gemini AI")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("AI provider")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Contribution overview")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("contribution-note high")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Primary finding")))
@@ -432,8 +465,8 @@ class AnalysisControllerTest {
                         "/reports/" + id + "/pdf?download=true"
                 )))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("data-reveal-on-scroll")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=28.0")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=28.0")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=29.0")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=29.0")));
     }
 
     @Test

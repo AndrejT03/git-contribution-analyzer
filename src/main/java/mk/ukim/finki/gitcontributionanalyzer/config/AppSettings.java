@@ -19,13 +19,9 @@ public record AppSettings(
         @Max(600)
         int gitTimeoutSeconds,
 
-        String geminiApiKey,
-
-        String geminiModel,
-
         @Min(30)
         @Max(600)
-        int geminiTimeoutSeconds,
+        int aiTimeoutSeconds,
 
         boolean mailEnabled,
 
@@ -33,8 +29,6 @@ public record AppSettings(
 ) {
 
     public AppSettings {
-        geminiApiKey = normalized(geminiApiKey);
-        geminiModel = normalized(geminiModel);
         mailFrom = normalized(mailFrom);
     }
 

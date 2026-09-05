@@ -1,7 +1,7 @@
 package mk.ukim.finki.gitcontributionanalyzer.service;
 import mk.ukim.finki.gitcontributionanalyzer.enums.*;
 import mk.ukim.finki.gitcontributionanalyzer.model.RepositoryData;
-import mk.ukim.finki.gitcontributionanalyzer.service.impl.GeminiPromptBuilder;
+import mk.ukim.finki.gitcontributionanalyzer.service.impl.AiPromptBuilder;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
 import java.util.List;
@@ -9,9 +9,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.assertThat;
 
-class GeminiPromptBuilderTest {
+class AiPromptBuilderTest {
 
-    private final GeminiPromptBuilder promptBuilder = new GeminiPromptBuilder(new ObjectMapper());
+    private final AiPromptBuilder promptBuilder = new AiPromptBuilder(new ObjectMapper());
 
     @Test
     void requestsExactUppercaseEnumNames() {

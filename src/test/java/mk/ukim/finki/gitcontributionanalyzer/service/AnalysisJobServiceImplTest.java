@@ -43,7 +43,7 @@ class AnalysisJobServiceImplTest {
                 .thenAnswer(invocation -> {
                     AnalysisProgressListener listener = invocation.getArgument(1);
                     listener.onStage(AnalysisStage.READING_REPOSITORY);
-                    listener.onStage(AnalysisStage.ANALYZING_WITH_GEMINI);
+                    listener.onStage(AnalysisStage.ANALYZING_WITH_AI);
                     listener.onStage(AnalysisStage.SAVING_REPORT);
                     listener.onStage(AnalysisStage.DELIVERING_EMAIL);
                     return report;
@@ -102,7 +102,7 @@ class AnalysisJobServiceImplTest {
                     snapshots.add(repository.findById(currentJobId).orElseThrow());
                     listener.onStage(AnalysisStage.READING_REPOSITORY);
                     snapshots.add(repository.findById(currentJobId).orElseThrow());
-                    listener.onStage(AnalysisStage.ANALYZING_WITH_GEMINI);
+                    listener.onStage(AnalysisStage.ANALYZING_WITH_AI);
                     snapshots.add(repository.findById(currentJobId).orElseThrow());
                     listener.onStage(AnalysisStage.LOCAL_FALLBACK);
                     listener.onAnalysisSource(AnalysisSource.LOCAL_FALLBACK);
@@ -127,7 +127,7 @@ class AnalysisJobServiceImplTest {
                 .containsExactly(
                         AnalysisStage.STARTING,
                         AnalysisStage.READING_REPOSITORY,
-                        AnalysisStage.ANALYZING_WITH_GEMINI,
+                        AnalysisStage.ANALYZING_WITH_AI,
                         AnalysisStage.LOCAL_FALLBACK,
                         AnalysisStage.PREPARING_REPORT,
                         AnalysisStage.SAVING_REPORT,
@@ -142,7 +142,7 @@ class AnalysisJobServiceImplTest {
                 AnalysisStage.QUEUED,
                 AnalysisStage.STARTING,
                 AnalysisStage.READING_REPOSITORY,
-                AnalysisStage.ANALYZING_WITH_GEMINI,
+                AnalysisStage.ANALYZING_WITH_AI,
                 AnalysisStage.LOCAL_FALLBACK,
                 AnalysisStage.PREPARING_REPORT,
                 AnalysisStage.SAVING_REPORT,
@@ -286,12 +286,14 @@ class AnalysisJobServiceImplTest {
         return new AnalysisRequest(
                 "https://github.com/team/project",
                 "A team planning application with shared tasks and progress tracking.",
-                "mentor@example.com"
+                "mentor@example.com",
+                "request-only-secret",
+                "openai::gpt-5.6-terra"
         );
     }
 
     private AnalysisReport sampleReport(EmailDelivery delivery) {
-        return sampleReport(delivery, AnalysisSource.GEMINI);
+        return sampleReport(delivery, AnalysisSource.AI_PROVIDER);
     }
 
     private AnalysisReport sampleReport(EmailDelivery delivery, AnalysisSource source) {
@@ -303,9 +305,9 @@ class AnalysisJobServiceImplTest {
                 "A team planning application with shared tasks and progress tracking.",
                 "mentor@example.com",
                 source,
-                source == AnalysisSource.GEMINI ? "gemini-test" : "Built-in heuristic rules",
-                source == AnalysisSource.GEMINI
-                        ? "Gemini completed the analysis."
+                source == AnalysisSource.AI_PROVIDER ? "OpenAI · gpt-5.6-terra" : "Built-in heuristic rules",
+                source == AnalysisSource.AI_PROVIDER
+                        ? "OpenAI completed the analysis."
                         : "The built-in local analyzer completed the analysis.",
                 1,
                 OffsetDateTime.now(),

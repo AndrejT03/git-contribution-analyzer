@@ -24,7 +24,7 @@ public class AnalysisJobTest {
     void keepsProgressMonotonicWhenAnOlderStageArrivesLate() {
         OffsetDateTime now = OffsetDateTime.parse("2026-07-16T12:00:00Z");
         AnalysisJob job = AnalysisJob.queued(UUID.randomUUID(), now)
-                .advanceTo(AnalysisStage.ANALYZING_WITH_GEMINI, now.plusSeconds(1));
+                .advanceTo(AnalysisStage.ANALYZING_WITH_AI, now.plusSeconds(1));
 
         AnalysisJob unchanged = job.advanceTo(
                 AnalysisStage.READING_REPOSITORY,
@@ -68,7 +68,7 @@ public class AnalysisJobTest {
         AnalysisJob fallback = AnalysisJob.queued(UUID.randomUUID(), now)
                 .advanceTo(AnalysisStage.STARTING, now.plusSeconds(1))
                 .advanceTo(AnalysisStage.READING_REPOSITORY, now.plusSeconds(2))
-                .advanceTo(AnalysisStage.ANALYZING_WITH_GEMINI, now.plusSeconds(3))
+                .advanceTo(AnalysisStage.ANALYZING_WITH_AI, now.plusSeconds(3))
                 .advanceTo(AnalysisStage.LOCAL_FALLBACK, now.plusSeconds(4));
 
         AnalysisJob duplicateUpdate = fallback.advanceTo(
@@ -82,7 +82,7 @@ public class AnalysisJobTest {
                 AnalysisStage.QUEUED,
                 AnalysisStage.STARTING,
                 AnalysisStage.READING_REPOSITORY,
-                AnalysisStage.ANALYZING_WITH_GEMINI,
+                AnalysisStage.ANALYZING_WITH_AI,
                 AnalysisStage.LOCAL_FALLBACK
         );
         assertThatThrownBy(() -> fallback.stageHistory().add(AnalysisStage.PREPARING_REPORT))

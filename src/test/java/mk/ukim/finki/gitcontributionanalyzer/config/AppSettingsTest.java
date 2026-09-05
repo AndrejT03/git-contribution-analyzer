@@ -19,9 +19,7 @@ class AppSettingsTest {
             "app.max-commits",
             "app.max-diff-chars",
             "app.git-timeout-seconds",
-            "app.gemini-api-key",
-            "app.gemini-model",
-            "app.gemini-timeout-seconds",
+            "app.ai-timeout-seconds",
             "app.mail-enabled",
             "app.mail-from"
     );
@@ -37,24 +35,20 @@ class AppSettingsTest {
             assertThat(settings.maxCommits()).isEqualTo(80);
             assertThat(settings.maxDiffChars()).isEqualTo(6000);
             assertThat(settings.gitTimeoutSeconds()).isEqualTo(120);
-            assertThat(settings.geminiApiKey()).isEmpty();
-            assertThat(settings.geminiModel()).isEqualTo("gemini-3.7-flash");
-            assertThat(settings.geminiTimeoutSeconds()).isEqualTo(180);
+            assertThat(settings.aiTimeoutSeconds()).isEqualTo(180);
             assertThat(settings.mailEnabled()).isFalse();
             assertThat(settings.mailFrom()).isEmpty();
         });
     }
 
     @Test
-    void bindsAndNormalizesExternalValues() throws IOException {
+    void bindsExternalValuesAndNormalizesMailAddress() throws IOException {
         withApplicationDefaults()
                 .withPropertyValues(
                         "app.max-commits=55",
                         "app.max-diff-chars=7500",
                         "app.git-timeout-seconds=90",
-                        "app.gemini-api-key=  secret-key  ",
-                        "app.gemini-model=  gemini-test  ",
-                        "app.gemini-timeout-seconds=75",
+                        "app.ai-timeout-seconds=75",
                         "app.mail-enabled=true",
                         "app.mail-from=  reports@example.com  "
                 )
@@ -64,9 +58,7 @@ class AppSettingsTest {
                     assertThat(settings.maxCommits()).isEqualTo(55);
                     assertThat(settings.maxDiffChars()).isEqualTo(7500);
                     assertThat(settings.gitTimeoutSeconds()).isEqualTo(90);
-                    assertThat(settings.geminiApiKey()).isEqualTo("secret-key");
-                    assertThat(settings.geminiModel()).isEqualTo("gemini-test");
-                    assertThat(settings.geminiTimeoutSeconds()).isEqualTo(75);
+                    assertThat(settings.aiTimeoutSeconds()).isEqualTo(75);
                     assertThat(settings.mailEnabled()).isTrue();
                     assertThat(settings.mailFrom()).isEqualTo("reports@example.com");
                 });
@@ -83,6 +75,22 @@ class AppSettingsTest {
                             .hasMessageContaining("maxCommits")
                             .hasMessageContaining("200");
                 });
+    }
+
+    @Test
+    void keepsProviderCredentialsOutOfApplicationConfiguration() throws IOException {
+        Properties properties = PropertiesLoaderUtils.loadProperties(
+                new ClassPathResource("application.properties")
+        );
+
+        assertThat(properties)
+                .containsKey("app.ai-timeout-seconds")
+                .doesNotContainKeys(
+                        "spring.config.import",
+                        "app.gemini-api-key",
+                        "app.gemini-model",
+                        "app.gemini-timeout-seconds"
+                );
     }
 
     private ApplicationContextRunner withApplicationDefaults() throws IOException {

@@ -56,8 +56,6 @@ class EmailReportServiceImplTest {
                 80,
                 6000,
                 120,
-                "",
-                "gemini-3.6-flash",
                 180,
                 mailEnabled,
                 mailFrom

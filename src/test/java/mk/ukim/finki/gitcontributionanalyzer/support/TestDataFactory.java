@@ -59,7 +59,7 @@ public class TestDataFactory {
                         "No critical imbalance."
                 )),
                 "The team achieved the main goal.",
-                "Gemini analyzed the commit messages, files, and diffs."
+                "The selected AI provider analyzed the commit messages, files, and diffs."
         );
 
         return new AnalysisReport(
@@ -69,9 +69,9 @@ public class TestDataFactory {
                 "main",
                 "Team collaboration and organization application with поддршка for student teams.",
                 "mentor@example.com",
-                AnalysisSource.GEMINI,
-                "gemini-3.7-flash",
-                "Gemini analyzed the Git history using the supplied project goal.",
+                AnalysisSource.AI_PROVIDER,
+                "OpenAI · gpt-5.6-terra",
+                "OpenAI analyzed the Git history using the supplied project goal.",
                 2,
                 OffsetDateTime.parse("2026-08-10T12:00:00+02:00"),
                 analysis,

@@ -1,7 +1,7 @@
 package mk.ukim.finki.gitcontributionanalyzer.enums;
 
 public enum AnalysisSource {
-    GEMINI("Gemini AI"),
+    AI_PROVIDER("AI Provider"),
     LOCAL_FALLBACK("Local fallback");
 
     private final String displayName;

@@ -69,14 +69,16 @@
         </div>
 
         <div class="ai-settings-grid" role="group" aria-label="AI provider settings">
-          <div class="form-field form-field--model">
+          <div class="form-field form-field--model"
+               th:classappend="${#fields.hasErrors('aiModel') ? ' form-field--invalid' : ''}">
             <div class="field-label-row">
               <label for="aiModel">AI model</label>
               <span id="selectedProvider" class="provider-chip" hidden aria-live="polite"></span>
             </div>
-            <select id="aiModel" name="aiModel" required
-                    aria-describedby="aiModelHint aiCredentialsNotice" aria-invalid="false">
-              <option value="" selected disabled>Choose a provider and model</option>
+            <select id="aiModel" th:field="*{aiModel}" required
+                    aria-describedby="aiModelHint aiModelError aiCredentialsNotice"
+                    th:attr="aria-invalid=${#fields.hasErrors('aiModel')}">
+              <option value="" disabled>Choose a provider and model</option>
               <optgroup label="Google Gemini">
                 <option value="google::gemini-3.7-flash" data-provider="Google Gemini" data-key-placeholder="AIza…">Gemini 3.7 Flash — Recommended</option>
                 <option value="google::gemini-3.5-flash-lite" data-provider="Google Gemini" data-key-placeholder="AIza…">Gemini 3.5 Flash Lite — Low cost</option>
@@ -128,21 +130,25 @@
               </optgroup>
             </select>
             <small id="aiModelHint" class="field-hint">The model also selects its provider; use a key issued by that provider.</small>
+            <small id="aiModelError" class="field-error" th:errors="*{aiModel}" role="alert"></small>
           </div>
 
-          <div class="form-field form-field--secret">
+          <div class="form-field form-field--secret"
+               th:classappend="${#fields.hasErrors('aiKey') ? ' form-field--invalid' : ''}">
             <label for="aiKey">AI API key</label>
             <div class="secret-input">
               <input id="aiKey" name="aiKey" type="password"
                      placeholder="Paste your provider API key" maxlength="1024"
                      autocomplete="off" autocapitalize="none" spellcheck="false" required
-                     aria-describedby="aiKeyHint aiCredentialsNotice" aria-invalid="false">
+                     aria-describedby="aiKeyHint aiKeyError aiCredentialsNotice"
+                     th:attr="aria-invalid=${#fields.hasErrors('aiKey')}">
               <button id="aiKeyVisibility" class="secret-input__toggle" type="button"
                       aria-controls="aiKey" aria-pressed="false" aria-label="Show API key">
                 <i class="bi bi-eye" aria-hidden="true"></i>
               </button>
             </div>
             <small id="aiKeyHint" class="field-hint" aria-live="polite">Choose a model to see which provider key is required.</small>
+            <small id="aiKeyError" class="field-error" th:errors="*{aiKey}" role="alert"></small>
           </div>
         </div>
 

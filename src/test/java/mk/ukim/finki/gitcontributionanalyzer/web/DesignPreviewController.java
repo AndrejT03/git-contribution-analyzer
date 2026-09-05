@@ -33,7 +33,7 @@ public class DesignPreviewController {
     @GetMapping("/__preview/progress")
     public String progress(
             @RequestParam(defaultValue = "QUEUED") AnalysisStage stage,
-            @RequestParam(defaultValue = "GEMINI") AnalysisSource source,
+            @RequestParam(defaultValue = "AI_PROVIDER") AnalysisSource source,
             @RequestParam(defaultValue = "false") boolean chrome,
             Model model) {
         AnalysisJob job = previewJobAt(stage, source);
@@ -65,8 +65,8 @@ public class DesignPreviewController {
             return job;
         }
 
-        job = job.advanceTo(AnalysisStage.ANALYZING_WITH_GEMINI, PREVIEW_TIME.plusSeconds(3));
-        if (targetStage == AnalysisStage.ANALYZING_WITH_GEMINI) {
+        job = job.advanceTo(AnalysisStage.ANALYZING_WITH_AI, PREVIEW_TIME.plusSeconds(3));
+        if (targetStage == AnalysisStage.ANALYZING_WITH_AI) {
             return job;
         }
         AnalysisSource source = targetStage == AnalysisStage.LOCAL_FALLBACK
@@ -178,9 +178,9 @@ public class DesignPreviewController {
                 "Ship a resilient telemetry pipeline and control dashboard so a single operator can safely "
                         + "supervise up to 24 concurrent drones, with graceful degradation when connectivity drops.",
                 "team@orbital-labs.dev",
-                AnalysisSource.GEMINI,
-                "Gemini 2.5 Pro",
-                "Gemini completed the contribution analysis.",
+                AnalysisSource.AI_PROVIDER,
+                "OpenAI · gpt-5.6-terra",
+                "OpenAI completed the contribution analysis.",
                 486,
                 PREVIEW_TIME,
                 new ContributionAnalysis(

@@ -2,15 +2,9 @@ package mk.ukim.finki.gitcontributionanalyzer.service;
 import mk.ukim.finki.gitcontributionanalyzer.config.AppSettings;
 import mk.ukim.finki.gitcontributionanalyzer.dto.AnalysisRequest;
 import mk.ukim.finki.gitcontributionanalyzer.dto.ContributionAnalysis;
-import mk.ukim.finki.gitcontributionanalyzer.enums.AnalysisSource;
-import mk.ukim.finki.gitcontributionanalyzer.enums.AnalysisStage;
-import mk.ukim.finki.gitcontributionanalyzer.enums.EmailDeliveryStatus;
-import mk.ukim.finki.gitcontributionanalyzer.enums.GeminiFailureReason;
-import mk.ukim.finki.gitcontributionanalyzer.exception.GeminiException;
-import mk.ukim.finki.gitcontributionanalyzer.model.ChangedFile;
-import mk.ukim.finki.gitcontributionanalyzer.model.EmailDelivery;
-import mk.ukim.finki.gitcontributionanalyzer.model.GitCommit;
-import mk.ukim.finki.gitcontributionanalyzer.model.RepositoryData;
+import mk.ukim.finki.gitcontributionanalyzer.enums.*;
+import mk.ukim.finki.gitcontributionanalyzer.exception.AiProviderException;
+import mk.ukim.finki.gitcontributionanalyzer.model.*;
 import mk.ukim.finki.gitcontributionanalyzer.repository.AnalysisReportRepository;
 import mk.ukim.finki.gitcontributionanalyzer.service.impl.ReportServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,7 +27,7 @@ class ReportServiceImplTest {
     private GitRepositoryService gitRepositoryService;
 
     @Mock
-    private GeminiAnalysisService geminiAnalysisService;
+    private AiAnalysisService aiAnalysisService;
 
     @Mock
     private LocalAnalysisService localAnalysisService;
@@ -52,22 +46,11 @@ class ReportServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        settings = new AppSettings(
-                80,
-                6000,
-                120,
-                "test-api-key",
-                "gemini-test-model",
-                60,
-                false,
-                ""
-        );
         reportService = new ReportServiceImpl(
                 gitRepositoryService,
-                geminiAnalysisService,
+                aiAnalysisService,
                 localAnalysisService,
                 reportRepository,
-                settings,
                 emailReportService
         );
 
@@ -88,7 +71,9 @@ class ReportServiceImplTest {
         request = new AnalysisRequest(
                 repository.url(),
                 "Team project for planning shared tasks.",
-                "mentor@example.com"
+                "mentor@example.com",
+                "request-only-secret",
+                "openai::gpt-5.6-terra"
         );
 
         when(gitRepositoryService.readRepository(repository.url())).thenReturn(repository);
@@ -97,34 +82,41 @@ class ReportServiceImplTest {
     }
 
     @Test
-    void keepsGeminiAsThePrimaryAnalyzer() {
-        ContributionAnalysis geminiResult = analysis("Gemini methodology");
-        when(geminiAnalysisService.analyze(any(), any())).thenReturn(geminiResult);
+    void usesTheRequestSelectedProviderAsThePrimaryAnalyzer() {
+        ContributionAnalysis providerResult = analysis("AI provider methodology");
+        when(aiAnalysisService.analyze(any(), any(), any(), any())).thenReturn(providerResult);
         List<AnalysisStage> stages = new ArrayList<>();
         List<AnalysisSource> sources = new ArrayList<>();
 
         var report = reportService.createReport(request, progressListener(stages, sources));
 
-        assertThat(report.analysis()).isSameAs(geminiResult);
-        assertThat(report.analysisSource()).isEqualTo(AnalysisSource.GEMINI);
-        assertThat(report.analysisModel()).isEqualTo("gemini-test-model");
+        assertThat(report.analysis()).isSameAs(providerResult);
+        assertThat(report.analysisSource()).isEqualTo(AnalysisSource.AI_PROVIDER);
+        assertThat(report.analysisModel()).isEqualTo("OpenAI · gpt-5.6-terra");
+        assertThat(report.analysisNotice()).contains("OpenAI analyzed");
         assertThat(stages).containsExactly(
                 AnalysisStage.READING_REPOSITORY,
-                AnalysisStage.ANALYZING_WITH_GEMINI,
+                AnalysisStage.ANALYZING_WITH_AI,
                 AnalysisStage.PREPARING_REPORT,
                 AnalysisStage.SAVING_REPORT,
                 AnalysisStage.DELIVERING_EMAIL
         );
-        assertThat(sources).containsExactly(AnalysisSource.GEMINI);
+        assertThat(sources).containsExactly(AnalysisSource.AI_PROVIDER);
         verify(localAnalysisService, never()).analyze(any(), any());
+        verify(aiAnalysisService).analyze(
+                request.projectDescription(),
+                repository,
+                AiProviderSelection.parse(request.aiModel()),
+                "request-only-secret"
+        );
         verify(reportRepository).save(report);
     }
 
     @Test
-    void usesLocalAnalysisWhenGeminiIsUnavailable() {
+    void usesLocalAnalysisWhenTheSelectedProviderIsUnavailable() {
         ContributionAnalysis localResult = analysis("Local analysis methodology");
-        when(geminiAnalysisService.analyze(any(), any()))
-                .thenThrow(new GeminiException(GeminiFailureReason.RATE_LIMITED));
+        when(aiAnalysisService.analyze(any(), any(), any(), any()))
+                .thenThrow(new AiProviderException(AiFailureReason.RATE_LIMITED, AiProvider.OPENAI));
         when(localAnalysisService.analyze(any(), any())).thenReturn(localResult);
         List<AnalysisStage> stages = new ArrayList<>();
         List<AnalysisSource> sources = new ArrayList<>();
@@ -140,7 +132,7 @@ class ReportServiceImplTest {
                 .doesNotContain("API unavailable");
         assertThat(stages).containsExactly(
                 AnalysisStage.READING_REPOSITORY,
-                AnalysisStage.ANALYZING_WITH_GEMINI,
+                AnalysisStage.ANALYZING_WITH_AI,
                 AnalysisStage.LOCAL_FALLBACK,
                 AnalysisStage.PREPARING_REPORT,
                 AnalysisStage.SAVING_REPORT,
@@ -153,8 +145,8 @@ class ReportServiceImplTest {
 
     @Test
     void keepsTheOnScreenReportWhenEmailDeliveryFailsUnexpectedly() {
-        ContributionAnalysis result = analysis("Gemini methodology");
-        when(geminiAnalysisService.analyze(any(), any())).thenReturn(result);
+        ContributionAnalysis result = analysis("AI provider methodology");
+        when(aiAnalysisService.analyze(any(), any(), any(), any())).thenReturn(result);
         when(emailReportService.sendReport(any()))
                 .thenThrow(new IllegalStateException("Email template failed"));
 

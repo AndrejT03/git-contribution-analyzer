@@ -1,68 +1,68 @@
 package mk.ukim.finki.gitcontributionanalyzer.enums;
 
-public enum GeminiFailureReason {
+public enum AiFailureReason {
     MISSING_API_KEY(
-            GeminiFailureCategory.CONFIGURATION,
+            AiFailureCategory.CONFIGURATION,
             "The Gemini API key is not configured."
     ),
     MISSING_MODEL(
-            GeminiFailureCategory.CONFIGURATION,
+            AiFailureCategory.CONFIGURATION,
             "The Gemini model is not configured."
     ),
     REQUEST_PREPARATION_FAILED(
-            GeminiFailureCategory.REQUEST,
+            AiFailureCategory.REQUEST,
             "The repository data could not be prepared for Gemini."
     ),
     REQUEST_REJECTED(
-            GeminiFailureCategory.REQUEST,
+            AiFailureCategory.REQUEST,
             "Gemini rejected the analysis request."
     ),
     CREDENTIALS_REJECTED(
-            GeminiFailureCategory.AUTHENTICATION,
+            AiFailureCategory.AUTHENTICATION,
             "Gemini rejected the configured API credentials."
     ),
     MODEL_UNAVAILABLE(
-            GeminiFailureCategory.CONFIGURATION,
+            AiFailureCategory.CONFIGURATION,
             "The configured Gemini model is unavailable."
     ),
     RATE_LIMITED(
-            GeminiFailureCategory.CAPACITY,
+            AiFailureCategory.CAPACITY,
             "Gemini's request limit or quota was reached."
     ),
     NETWORK_ERROR(
-            GeminiFailureCategory.CONNECTIVITY,
+            AiFailureCategory.CONNECTIVITY,
             "Gemini could not be reached because of a network connection problem."
     ),
     TIMEOUT(
-            GeminiFailureCategory.CONNECTIVITY,
+            AiFailureCategory.CONNECTIVITY,
             "Gemini did not respond before the configured timeout."
     ),
     SERVICE_UNAVAILABLE(
-            GeminiFailureCategory.PROVIDER,
+            AiFailureCategory.PROVIDER,
             "Gemini is temporarily unavailable."
     ),
     BLOCKED_RESPONSE(
-            GeminiFailureCategory.RESPONSE,
+            AiFailureCategory.RESPONSE,
             "Gemini blocked the request and did not return an analysis."
     ),
     EMPTY_RESPONSE(
-            GeminiFailureCategory.RESPONSE,
+            AiFailureCategory.RESPONSE,
             "Gemini returned no analysis."
     ),
     INVALID_RESPONSE(
-            GeminiFailureCategory.RESPONSE,
+            AiFailureCategory.RESPONSE,
             "Gemini returned an incomplete or invalid analysis."
     );
 
-    private final GeminiFailureCategory category;
+    private final AiFailureCategory category;
     private final String userMessage;
 
-    GeminiFailureReason(GeminiFailureCategory category, String userMessage) {
+    AiFailureReason(AiFailureCategory category, String userMessage) {
         this.category = category;
         this.userMessage = userMessage;
     }
 
-    public GeminiFailureCategory category() {
+    public AiFailureCategory category() {
         return category;
     }
 
