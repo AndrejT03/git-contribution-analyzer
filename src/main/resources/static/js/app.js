@@ -2,9 +2,21 @@ const reducedMotionPreference = window.matchMedia?.("(prefers-reduced-motion: re
 const motionIsReduced = reducedMotionPreference?.matches ?? false;
 
 const initializeRevealAnimations = () => {
-    const loadTargets = Array.from(document.querySelectorAll("[data-reveal]"));
-    const scrollTargets = Array.from(document.querySelectorAll("[data-reveal-on-scroll]"));
+    const revealSelector = "[data-reveal], [data-reveal-on-scroll], [data-reveal-group]";
+    const groupTargets = Array.from(document.querySelectorAll("[data-reveal-group]"));
+    const loadTargets = Array.from(document.querySelectorAll(
+        "[data-reveal], [data-reveal-group=\"load\"]"
+    ));
+    const scrollTargets = Array.from(document.querySelectorAll(
+        "[data-reveal-on-scroll], [data-reveal-group]:not([data-reveal-group=\"load\"])"
+    ));
     const allTargets = [...new Set([...loadTargets, ...scrollTargets])];
+
+    groupTargets.forEach((group) => {
+        Array.from(group.children).forEach((child, index) => {
+            child.style.setProperty("--reveal-item-delay", `${Math.min(index, 10) * 55}ms`);
+        });
+    });
 
     if (allTargets.length === 0 || motionIsReduced || typeof window.IntersectionObserver !== "function") {
         allTargets.forEach((target) => target.classList.add("is-revealed"));
@@ -35,7 +47,7 @@ const initializeRevealAnimations = () => {
     scrollTargets.forEach((target) => observer.observe(target));
 
     document.addEventListener("focusin", (event) => {
-        const target = event.target.closest?.("[data-reveal], [data-reveal-on-scroll]");
+        const target = event.target.closest?.(revealSelector);
         if (target) {
             reveal(target);
         }
@@ -53,8 +65,8 @@ const initializeRevealAnimations = () => {
             // Keep the raw fragment when it is not valid percent-encoded text.
         }
         const target = document.getElementById(targetId);
-        const revealTarget = target?.closest?.("[data-reveal], [data-reveal-on-scroll]")
-            ?? target?.querySelector?.("[data-reveal], [data-reveal-on-scroll]");
+        const revealTarget = target?.closest?.(revealSelector)
+            ?? target?.querySelector?.(revealSelector);
         if (revealTarget) {
             reveal(revealTarget);
         }

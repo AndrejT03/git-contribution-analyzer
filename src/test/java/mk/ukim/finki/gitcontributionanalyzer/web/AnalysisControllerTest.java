@@ -64,9 +64,10 @@ class AnalysisControllerTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("AI API key are used only")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Your selected AI model classifies")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("data-reveal-on-scroll")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("data-reveal-group")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("aria-invalid=\"false\"")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=29.0")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=29.0")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=30.0")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=30.0")));
     }
 
     @Test
@@ -166,9 +167,9 @@ class AnalysisControllerTest {
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("id=\"progressStageNumber\"")
                 )))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("data-reveal-on-scroll")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=29.0")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=29.0")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("data-reveal-group=\"load\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=30.0")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=30.0")));
     }
 
     @Test
@@ -391,8 +392,8 @@ class AnalysisControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(view().name("error-page"))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("We couldn&#39;t process that request")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=29.0")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=29.0")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=30.0")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=30.0")))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("data-error-preview=\"400\""))));
     }
@@ -465,8 +466,9 @@ class AnalysisControllerTest {
                         "/reports/" + id + "/pdf?download=true"
                 )))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("data-reveal-on-scroll")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=29.0")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=29.0")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("data-reveal-group")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=30.0")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=30.0")));
     }
 
     @Test
@@ -569,15 +571,19 @@ class AnalysisControllerTest {
     }
 
     @Test
-    void servesTheVersionedPhaseTwentyEightStylesheetWithCoreInteractionStates() throws Exception {
-        mockMvc.perform(get("/css/style.css").param("v", "28.0"))
+    void servesTheVersionedPhaseThirtyStylesheetWithCompactAnimatedInteractionStates() throws Exception {
+        mockMvc.perform(get("/css/style.css").param("v", "30.0"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith("text/css"))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("--blue: #0071e3")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("body.home-body")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("body.progress-body")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("body.report-body")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("body.error-body")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("--shadow-raised:")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "backdrop-filter: saturate(165%) blur(18px)"
+                )))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(".home-body .home-hero__content")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(".progress-body .site-header")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(".report-body {")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(".error-body {")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         ".progress-experience.is-advancing"
                 )))
@@ -589,7 +595,16 @@ class AnalysisControllerTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(".secret-input__toggle")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(".form-field select:focus")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(".reveal-ready [data-reveal]")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("[data-reveal-group].is-revealed")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "grid-template-columns: repeat(9, minmax(0, 1fr))"
+                )))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("@keyframes progress-ring-spin")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("@keyframes bar-grow")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("prefers-reduced-motion: reduce")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "prefers-reduced-transparency: reduce"
+                )))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "oklch(57% 0.16 var(--contributor-hue, 210deg))"
                 )))
@@ -598,6 +613,9 @@ class AnalysisControllerTest {
                 )))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("@keyframes progress-aura")
+                )))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("zoom: 1.25")
                 )));
     }
 

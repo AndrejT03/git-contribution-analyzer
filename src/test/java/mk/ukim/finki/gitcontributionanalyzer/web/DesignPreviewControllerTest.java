@@ -26,8 +26,8 @@ class DesignPreviewControllerTest {
     void loadsTheIsolatedPreviewScriptOnProgressFixtures() throws Exception {
         mockMvc.perform(get("/__preview/progress").param("chrome", "true"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("/js/design-preview.js?v=29.0")))
-                .andExpect(content().string(containsString("/js/app.js?v=29.0")))
+                .andExpect(content().string(containsString("/js/design-preview.js?v=30.0")))
+                .andExpect(content().string(containsString("/js/app.js?v=30.0")))
                 .andExpect(content().string(containsString("data-progress-preview=\"failure\"")))
                 .andExpect(content().string(not(containsString("data-current-stage="))))
                 .andExpect(content().string(not(containsString("data-stage-state="))));
@@ -37,7 +37,7 @@ class DesignPreviewControllerTest {
     void loadsTheIsolatedPreviewScriptOnErrorFixtures() throws Exception {
         mockMvc.perform(get("/__preview/error"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("/js/design-preview.js?v=29.0")))
+                .andExpect(content().string(containsString("/js/design-preview.js?v=30.0")))
                 .andExpect(content().string(containsString("data-error-preview=\"404\"")));
     }
 

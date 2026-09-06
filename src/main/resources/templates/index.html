@@ -13,20 +13,20 @@
 
 <main>
   <section class="home-hero" aria-labelledby="home-title">
-    <div class="home-hero__content">
-      <p class="product-kicker" data-reveal>Git Contribution AI</p>
-      <h1 id="home-title" data-reveal style="--reveal-delay: 70ms">Who really contributed to<br>the project?</h1>
-      <p class="home-hero__lead" data-reveal style="--reveal-delay: 140ms">
+    <div class="home-hero__content" data-reveal-group="load">
+      <p class="product-kicker">Git Contribution AI</p>
+      <h1 id="home-title">Who really contributed to<br>the project?</h1>
+      <p class="home-hero__lead">
         Git Contribution AI reads the commit history and<br>
         prepares a clear report about each team member's work.
       </p>
 
-      <nav class="hero-actions" aria-label="Page shortcuts" data-reveal style="--reveal-delay: 210ms">
+      <nav class="hero-actions" aria-label="Page shortcuts">
         <a href="#new-analysis">Start analysis <i class="bi bi-chevron-right" aria-hidden="true"></i></a>
         <a href="#how-it-works">Understand how it works <i class="bi bi-chevron-right" aria-hidden="true"></i></a>
       </nav>
 
-      <ul class="trust-row" aria-label="Supported repositories and privacy" data-reveal style="--reveal-delay: 280ms">
+      <ul class="trust-row" aria-label="Supported repositories and privacy">
         <li><i class="bi bi-github" aria-hidden="true"></i> Public GitHub</li>
         <li><i class="bi bi-gitlab" aria-hidden="true"></i> Public GitLab</li>
         <li><i class="bi bi-shield-check" aria-hidden="true"></i> API key never stored</li>
@@ -41,7 +41,8 @@
     </div>
 
     <div class="analysis-form-card" data-reveal-on-scroll style="--reveal-delay: 80ms">
-      <form id="analysisForm" th:action="@{/analyze}" th:object="${analysisRequest}" method="post">
+      <form id="analysisForm" th:action="@{/analyze}" th:object="${analysisRequest}" method="post"
+            data-reveal-group>
         <div class="form-field"
              th:classappend="${#fields.hasErrors('repositoryUrl') ? ' form-field--invalid' : ''}">
           <label for="repositoryUrl">Repository URL</label>
@@ -80,9 +81,9 @@
                     th:attr="aria-invalid=${#fields.hasErrors('aiModel')}">
               <option value="" disabled>Choose a provider and model</option>
               <optgroup label="Google Gemini">
-                <option value="google::gemini-3.7-flash" data-provider="Google Gemini" data-key-placeholder="AIza…">Gemini 3.7 Flash — Recommended</option>
-                <option value="google::gemini-3.5-flash-lite" data-provider="Google Gemini" data-key-placeholder="AIza…">Gemini 3.5 Flash Lite — Low cost</option>
-                <option value="google::gemini-3.1-pro-preview" data-provider="Google Gemini" data-key-placeholder="AIza…">Gemini 3.1 Pro — Preview</option>
+                <option value="google::gemini-3.7-flash" data-provider="Google Gemini" data-key-placeholder="AQ…">Gemini 3.7 Flash — Recommended</option>
+                <option value="google::gemini-3.5-flash-lite" data-provider="Google Gemini" data-key-placeholder="AQ…">Gemini 3.5 Flash Lite — Low cost</option>
+                <option value="google::gemini-3.1-pro-preview" data-provider="Google Gemini" data-key-placeholder="AQ…">Gemini 3.1 Pro — Preview</option>
               </optgroup>
               <optgroup label="OpenAI">
                 <option value="openai::gpt-5.6-terra" data-provider="OpenAI" data-key-placeholder="sk-…">GPT-5.6 Terra — Recommended</option>
@@ -175,23 +176,23 @@
       <p>Four stages, from raw Git history to a report you can read and share.</p>
     </div>
 
-    <ol class="how-grid">
-      <li class="how-card" data-reveal-on-scroll>
+    <ol class="how-grid" data-reveal-group>
+      <li class="how-card">
         <div class="how-card__step"><i class="bi bi-bezier2" aria-hidden="true"></i><span>Step 1</span></div>
         <h3>Read Git history</h3>
         <p>Clone commits, authors, and diffs from the public repository.</p>
       </li>
-      <li class="how-card" data-reveal-on-scroll style="--reveal-delay: 70ms">
+      <li class="how-card">
         <div class="how-card__step"><i class="bi bi-cpu" aria-hidden="true"></i><span>Step 2</span></div>
         <h3>Analyze contributions</h3>
         <p>Your selected AI model classifies each commit, with a deterministic local fallback.</p>
       </li>
-      <li class="how-card" data-reveal-on-scroll>
+      <li class="how-card">
         <div class="how-card__step"><i class="bi bi-file-earmark-text" aria-hidden="true"></i><span>Step 3</span></div>
         <h3>Build the browser report</h3>
         <p>A detailed, scannable report opens right here in your browser.</p>
       </li>
-      <li class="how-card" data-reveal-on-scroll style="--reveal-delay: 70ms">
+      <li class="how-card">
         <div class="how-card__step"><i class="bi bi-envelope" aria-hidden="true"></i><span>Step 4</span></div>
         <h3>Attempt email delivery</h3>
         <p>A secondary copy is sent to your inbox whenever possible.</p>

@@ -11,13 +11,13 @@
 </header>
 
 <main class="progress-page">
-    <section class="progress-experience"
+    <section class="progress-experience" data-reveal-group="load"
              data-analysis-progress
              th:classappend="${presentationJob.status.name() == 'FAILED' ? ' is-failed' : (presentationJob.status.name() == 'COMPLETED' ? ' is-complete' : '')}"
              th:attr="data-status-url=@{/api/analyses/{id}(id=${job.id})},data-initial-status=${job.status.name()},data-replay-from-start=${replayFromStart},data-report-url=${jobStatus.reportUrl}">
         <div id="previewBadge" class="preview-badge" th:if="${previewMode == true}" hidden>Preview</div>
 
-        <div id="connectionState" class="connection-state" aria-live="polite" data-reveal>
+        <div id="connectionState" class="connection-state" aria-live="polite">
             <i class="connection-state__normal bi bi-arrow-clockwise" aria-hidden="true"></i>
             <i class="connection-state__complete bi bi-check-circle" aria-hidden="true"></i>
             <i class="connection-state__reconnect bi bi-wifi-off" aria-hidden="true"></i>
@@ -26,26 +26,24 @@
                   th:text="${presentationJob.status.name() == 'FAILED' ? 'Analysis stopped' : (presentationJob.status.name() == 'COMPLETED' ? 'Analysis complete' : (presentationJob.stage.name() == 'QUEUED' ? 'Queued for analysis' : 'Analyzing repository'))}">Queued for analysis</span>
         </div>
 
-        <p id="repositoryLabel" class="progress-repository" th:text="${job.repositoryLabel}"
-           data-reveal style="--reveal-delay: 70ms">orbital-labs/flightdeck</p>
+        <p id="repositoryLabel" class="progress-repository" th:text="${job.repositoryLabel}">orbital-labs/flightdeck</p>
 
         <div id="progressRing" class="progress-ring"
              role="progressbar" aria-label="Analysis completion" aria-valuemin="0" aria-valuemax="100"
-             th:attr="aria-valuenow=${presentationJob.progress}" aria-describedby="progressMessage"
-             data-reveal style="--reveal-delay: 140ms">
+             th:attr="aria-valuenow=${presentationJob.progress}" aria-describedby="progressMessage">
             <div class="progress-ring__inner">
                 <div class="progress-ring__value"><strong id="progressPercent" th:text="${presentationJob.progress}">0</strong><span>%</span></div>
             </div>
         </div>
 
-        <div class="progress-copy" data-reveal style="--reveal-delay: 210ms">
+        <div class="progress-copy">
             <h1 id="progressStage" th:text="${presentationJob.stage.label}">Queued</h1>
             <p id="progressMessage" aria-live="polite" th:text="${presentationJobStatus.message}">
                 Your repository analysis is waiting to start.
             </p>
         </div>
 
-        <section class="analysis-pipeline" aria-labelledby="analysisPipelineTitle" data-reveal-on-scroll>
+        <section class="analysis-pipeline" aria-labelledby="analysisPipelineTitle" data-reveal-group>
             <header class="analysis-pipeline__header">
                 <h2 id="analysisPipelineTitle">Analysis pipeline</h2>
                 <p><span id="pipelineStageNumber"
@@ -97,7 +95,7 @@
             </div>
         </div>
 
-        <nav class="progress-preview" aria-label="Preview analysis states" data-reveal-on-scroll
+        <nav class="progress-preview" aria-label="Preview analysis states"
              th:if="${previewMode == true and previewChrome == true}">
             <span>Preview states:</span>
             <button type="button" data-progress-preview="failure" aria-pressed="false">Analysis failure</button>
