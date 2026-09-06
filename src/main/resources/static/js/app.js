@@ -1,5 +1,70 @@
 const reducedMotionPreference = window.matchMedia?.("(prefers-reduced-motion: reduce)");
 const motionIsReduced = reducedMotionPreference?.matches ?? false;
+const PAGE_EXIT_DURATION_MS = 400;
+let pageExitStarted = false;
+
+document.documentElement.classList.add("page-transition-ready");
+
+const runAfterPageExit = (action) => {
+    if (motionIsReduced) {
+        action();
+        return;
+    }
+
+    if (pageExitStarted) {
+        return;
+    }
+
+    pageExitStarted = true;
+    document.body.classList.add("is-page-leaving");
+    window.setTimeout(action, PAGE_EXIT_DURATION_MS);
+};
+
+const navigateWithTransition = (url, {replace = false} = {}) => {
+    runAfterPageExit(() => {
+        if (replace) {
+            window.location.replace(url);
+        } else {
+            window.location.assign(url);
+        }
+    });
+};
+
+window.addEventListener("pageshow", () => {
+    pageExitStarted = false;
+    document.body.classList.remove("is-page-leaving");
+});
+
+document.addEventListener("click", (event) => {
+    const anchor = event.target.closest?.("a[href]");
+    if (!anchor
+        || event.defaultPrevented
+        || event.button !== 0
+        || event.metaKey
+        || event.ctrlKey
+        || event.shiftKey
+        || event.altKey
+        || anchor.hasAttribute("download")
+        || (anchor.target && anchor.target !== "_self")
+        || anchor.dataset.noPageTransition === "true") {
+        return;
+    }
+
+    const destination = new URL(anchor.href, window.location.href);
+    const staysOnCurrentDocument = destination.origin === window.location.origin
+        && destination.pathname === window.location.pathname
+        && destination.search === window.location.search
+        && Boolean(destination.hash);
+
+    if (destination.origin !== window.location.origin
+        || !["http:", "https:"].includes(destination.protocol)
+        || staysOnCurrentDocument) {
+        return;
+    }
+
+    event.preventDefault();
+    navigateWithTransition(destination.href);
+});
 
 const initializeRevealAnimations = () => {
     const revealSelector = "[data-reveal], [data-reveal-on-scroll], [data-reveal-group]";
@@ -14,7 +79,7 @@ const initializeRevealAnimations = () => {
 
     groupTargets.forEach((group) => {
         Array.from(group.children).forEach((child, index) => {
-            child.style.setProperty("--reveal-item-delay", `${Math.min(index, 10) * 55}ms`);
+            child.style.setProperty("--reveal-item-delay", `${Math.min(index, 10) * 48}ms`);
         });
     });
 
@@ -173,34 +238,37 @@ if (form) {
         });
     });
 
-    form.addEventListener("submit", () => {
+    form.addEventListener("submit", (event) => {
         if (!form.checkValidity()) {
             return;
         }
 
+        event.preventDefault();
         const button = document.getElementById("submitButton");
         const overlay = document.getElementById("loadingOverlay");
         button.disabled = true;
         button.textContent = "Starting analysis…";
         overlay.hidden = false;
+        runAfterPageExit(() => window.HTMLFormElement.prototype.submit.call(form));
     });
 }
 
 const progressRoot = document.querySelector("[data-analysis-progress]");
 
 if (progressRoot) {
-    const MIN_PROGRESS_TWEEN_MS = 800;
-    const MAX_PROGRESS_TWEEN_MS = 2400;
-    const PROGRESS_TWEEN_MS_PER_PERCENT = 45;
-    const MAX_PROGRESS_DELTA_PER_FRAME = 0.72;
-    const STAGE_HOLD_MS = 450;
-    const INITIAL_STAGE_HOLD_MS = motionIsReduced ? 0 : 650;
-    const COMPLETION_HOLD_MS = motionIsReduced ? 1200 : 1600;
+    const MIN_PROGRESS_TWEEN_MS = 900;
+    const MAX_PROGRESS_TWEEN_MS = 2600;
+    const PROGRESS_TWEEN_MS_PER_PERCENT = 48;
+    const STAGE_HOLD_MS = 480;
+    const STAGE_COPY_ANIMATION_MS = 620;
+    const INITIAL_STAGE_HOLD_MS = motionIsReduced ? 0 : 700;
+    const COMPLETION_HOLD_MS = motionIsReduced ? 1200 : 1750;
     const statusUrl = progressRoot.dataset.statusUrl;
     const initialStatus = progressRoot.dataset.initialStatus;
     const replayFromStart = progressRoot.dataset.replayFromStart === "true";
     const initialReportUrl = progressRoot.dataset.reportUrl;
     const progressRing = document.getElementById("progressRing");
+    const pipelineTrackFill = document.getElementById("pipelineTrackFill");
     const progressPercent = document.getElementById("progressPercent");
     const pipelineStageNumber = document.getElementById("pipelineStageNumber");
     const progressStage = document.getElementById("progressStage");
@@ -218,11 +286,16 @@ if (progressRoot) {
     }));
     let retryDelay = 1000;
     let pollingStopped = false;
+    let statusUpdatesStopped = false;
     let completionScheduled = false;
     let displayedProgress = Number(progressRing.getAttribute("aria-valuenow")) || 0;
     let displayedStageIndex = Math.max(0, stageItems.findIndex((item) => item.classList.contains("is-current")));
     let progressAnimationFrame = null;
     let finishProgressAnimation = null;
+    let stageChangeAnimationFrame = null;
+    let stageChangeTimeout = null;
+    let statusRenderVersion = 0;
+    let displayedStageKey = `${stages[displayedStageIndex]?.name}:${initialStatus}`;
 
     const wait = (duration) => new Promise((resolve) => window.setTimeout(resolve, duration));
 
@@ -260,26 +333,67 @@ if (progressRoot) {
         });
 
         updateText(pipelineStageNumber, String(activeIndex + 1));
+        pipelineTrackFill.style.width = `${activeIndex / (stageItems.length - 1) * 100}%`;
     };
 
     const applyProgress = (progress) => {
-        const roundedProgress = Math.round(progress);
-        displayedProgress = progress;
+        const boundedProgress = Math.max(0, Math.min(100, Number(progress) || 0));
+        const roundedProgress = Math.round(boundedProgress);
+        displayedProgress = boundedProgress;
+        progressRing.style.setProperty("--progress-offset", String(100 - boundedProgress));
         if (progressRing.getAttribute("aria-valuenow") !== String(roundedProgress)) {
             progressRing.setAttribute("aria-valuenow", String(roundedProgress));
         }
         updateText(progressPercent, String(roundedProgress));
     };
 
-    const animateProgressTo = (targetProgress) => {
+    const stopProgressAnimation = () => {
         if (progressAnimationFrame !== null) {
             window.cancelAnimationFrame(progressAnimationFrame);
             progressAnimationFrame = null;
-            finishProgressAnimation?.();
-            finishProgressAnimation = null;
-            progressRoot.classList.remove("is-advancing");
-            progressRing.classList.remove("is-advancing");
         }
+        finishProgressAnimation?.();
+        finishProgressAnimation = null;
+        progressRoot.classList.remove("is-advancing");
+        progressRing.classList.remove("is-advancing");
+    };
+
+    const stopStageAnimation = () => {
+        if (stageChangeAnimationFrame !== null) {
+            window.cancelAnimationFrame(stageChangeAnimationFrame);
+            stageChangeAnimationFrame = null;
+        }
+        window.clearTimeout(stageChangeTimeout);
+        stageChangeTimeout = null;
+        progressRoot.classList.remove("is-stage-changing");
+    };
+
+    const animateStageChange = (job) => {
+        const stageKey = `${job.stage}:${job.status}`;
+        if (displayedStageKey === stageKey) {
+            return;
+        }
+
+        displayedStageKey = stageKey;
+        stopStageAnimation();
+        if (motionIsReduced) {
+            return;
+        }
+
+        stageChangeAnimationFrame = window.requestAnimationFrame(() => {
+            stageChangeAnimationFrame = null;
+            progressRoot.classList.add("is-stage-changing");
+            stageChangeTimeout = window.setTimeout(() => {
+                progressRoot.classList.remove("is-stage-changing");
+                stageChangeTimeout = null;
+            }, STAGE_COPY_ANIMATION_MS);
+        });
+    };
+
+    applyProgress(displayedProgress);
+
+    const animateProgressTo = (targetProgress) => {
+        stopProgressAnimation();
 
         const startProgress = displayedProgress;
         const distance = targetProgress - startProgress;
@@ -307,16 +421,10 @@ if (progressRoot) {
             const animate = (timestamp) => {
                 startedAt ??= timestamp;
                 const elapsed = Math.min(1, (timestamp - startedAt) / duration);
-                const eased = (1 - Math.cos(Math.PI * elapsed)) / 2;
-                const desiredProgress = startProgress + distance * eased;
-                const distanceToDesired = desiredProgress - displayedProgress;
-                const frameDelta = Math.sign(distanceToDesired) * Math.min(
-                    Math.abs(distanceToDesired),
-                    MAX_PROGRESS_DELTA_PER_FRAME
-                );
-                applyProgress(displayedProgress + frameDelta);
+                const eased = elapsed * elapsed * elapsed * (elapsed * (elapsed * 6 - 15) + 10);
+                applyProgress(startProgress + distance * eased);
 
-                if (elapsed < 1 || Math.abs(targetProgress - displayedProgress) >= 0.01) {
+                if (elapsed < 1) {
                     progressAnimationFrame = window.requestAnimationFrame(animate);
                     return;
                 }
@@ -339,6 +447,9 @@ if (progressRoot) {
     };
 
     const setReconnecting = () => {
+        if (statusUpdatesStopped) {
+            return;
+        }
         progressRoot.classList.add("is-reconnecting");
         updateText(connectionStatus, "Reconnecting…");
         updateText(
@@ -348,30 +459,54 @@ if (progressRoot) {
     };
 
     const renderStatus = (job) => {
+        if (statusUpdatesStopped) {
+            return Promise.resolve();
+        }
+
+        const renderVersion = ++statusRenderVersion;
         const progress = Math.max(0, Math.min(100, Number(job.progress) || 0));
         const completed = job.status === "COMPLETED";
-        const progressAnimation = animateProgressTo(progress);
+        const failed = job.status === "FAILED";
+        let progressAnimation;
+        if (failed) {
+            stopProgressAnimation();
+            applyProgress(progress);
+            progressAnimation = Promise.resolve();
+        } else {
+            progressAnimation = animateProgressTo(progress);
+        }
+        animateStageChange(job);
         updateText(progressStage, job.stageLabel);
         updateText(progressMessage, job.message);
         updateText(repositoryLabel, job.repositoryLabel);
-        setStageState(job);
+        setStageState(completed && displayedProgress < 100 ? {
+            ...job,
+            stageStates: {...job.stageStates, [job.stage]: "ACTIVE"}
+        } : job);
 
-        const failed = job.status === "FAILED";
         progressRoot.classList.toggle("is-failed", failed);
-        progressRoot.classList.toggle("is-complete", completed);
+        progressRoot.classList.toggle("is-complete", completed && displayedProgress >= 100);
         progressFailure.hidden = !failed;
         if (failed) {
+            pollingStopped = true;
+            statusUpdatesStopped = true;
+            stopStageAnimation();
             updateText(connectionStatus, "Analysis stopped");
         } else if (completed) {
-            updateText(connectionStatus, "Analysis complete");
-        } else if (job.stage === "QUEUED") {
-            updateText(connectionStatus, "Queued for analysis");
-        } else if (job.stage === "STARTING") {
-            updateText(connectionStatus, "Starting analysis");
+            updateText(connectionStatus, displayedProgress >= 100 ? "Analysis complete" : "Finishing analysis");
         } else {
             updateText(connectionStatus, "Analyzing repository");
         }
-        return progressAnimation;
+        return progressAnimation.then(() => {
+            if (statusUpdatesStopped || renderVersion !== statusRenderVersion) {
+                return;
+            }
+            if (completed && displayedProgress >= 100) {
+                progressRoot.classList.add("is-complete");
+                setStageState(job);
+                updateText(connectionStatus, "Analysis complete");
+            }
+        });
     };
 
     const stageIndexFor = (stageName) => stages.findIndex((stage) => stage.name === stageName);
@@ -383,10 +518,10 @@ if (progressRoot) {
             let state = "PENDING";
             if (stage.index === activeIndex) {
                 state = completed ? "COMPLETE" : "ACTIVE";
-            } else if (stage.index < activeIndex && reachedStages.has(stage.name)) {
-                state = "COMPLETE";
             } else if (stage.index < activeIndex && job.stageStates?.[stage.name] === "SKIPPED") {
                 state = "SKIPPED";
+            } else if (stage.index < activeIndex && reachedStages.has(stage.name)) {
+                state = "COMPLETE";
             }
             return [stage.name, state];
         }));
@@ -403,11 +538,17 @@ if (progressRoot) {
             stageLabel: stage.label,
             progress: stage.progress,
             message: failed ? job.message : stage.message,
-            stageStates: replayStageStates(job, stage.index, completed)
+            stageStates: {
+                ...replayStageStates(job, stage.index, completed),
+                ...(isTargetStage ? job.stageStates : {})
+            }
         };
     };
 
     const renderStatusSequence = async (job) => {
+        if (statusUpdatesStopped) {
+            return;
+        }
         const targetStageIndex = stageIndexFor(job.stage);
         if (targetStageIndex < 0) {
             await renderStatus(job);
@@ -435,8 +576,14 @@ if (progressRoot) {
         }
 
         for (const [index, stage] of stagesToReplay.entries()) {
+            if (statusUpdatesStopped) {
+                return;
+            }
             const isTargetStage = stage.index === targetStageIndex;
             await renderStatus(replayJobFor(job, stage, isTargetStage));
+            if (statusUpdatesStopped) {
+                return;
+            }
             displayedStageIndex = stage.index;
 
             if (index < stagesToReplay.length - 1) {
@@ -446,7 +593,7 @@ if (progressRoot) {
     };
 
     const scheduleReportRedirect = (reportUrl) => {
-        if (completionScheduled) {
+        if (completionScheduled || statusUpdatesStopped) {
             return;
         }
 
@@ -457,13 +604,22 @@ if (progressRoot) {
 
         completionScheduled = true;
         window.requestAnimationFrame(() => {
-            window.setTimeout(() => window.location.replace(reportUrl), COMPLETION_HOLD_MS);
+            window.setTimeout(() => {
+                if (!statusUpdatesStopped) {
+                    navigateWithTransition(reportUrl, {replace: true});
+                }
+            }, COMPLETION_HOLD_MS);
         });
     };
 
     const showFailure = (message) => {
         pollingStopped = true;
+        statusUpdatesStopped = true;
+        statusRenderVersion += 1;
+        stopProgressAnimation();
+        stopStageAnimation();
         setConnected();
+        progressRoot.classList.remove("is-complete");
         progressRoot.classList.add("is-failed");
         updateText(connectionStatus, "Analysis stopped");
         updateText(progressMessage, message);
@@ -491,8 +647,14 @@ if (progressRoot) {
             }
 
             const job = await response.json();
+            if (statusUpdatesStopped) {
+                return;
+            }
             setConnected();
             await renderStatusSequence(job);
+            if (statusUpdatesStopped) {
+                return;
+            }
             retryDelay = 1000;
 
             if (job.status === "COMPLETED") {
@@ -506,6 +668,9 @@ if (progressRoot) {
 
             window.setTimeout(pollStatus, retryDelay);
         } catch {
+            if (statusUpdatesStopped) {
+                return;
+            }
             setReconnecting();
             retryDelay = Math.min(retryDelay * 2, 8000);
             window.setTimeout(pollStatus, retryDelay);

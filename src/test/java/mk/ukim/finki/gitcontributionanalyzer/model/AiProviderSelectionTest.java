@@ -22,16 +22,25 @@ class AiProviderSelectionTest {
     );
 
     @Test
-    void parsesAllTwentySevenModelsAcrossAllElevenProviders() {
+    void parsesAllFiftyTwoModelsAcrossAllElevenProviders() {
         assertThat(AiProvider.values()).hasSize(11);
-        assertThat(AiProviderSelection.supportedValues()).hasSize(27);
+        assertThat(AiProviderSelection.supportedValues()).hasSize(51);
 
         assertThat(AiProviderSelection.supportedValues())
                 .allSatisfy(value -> {
                     AiProviderSelection selection = AiProviderSelection.parse(value);
                     assertThat(selection.namespacedModel()).isEqualTo(value);
                     assertThat(selection.provider().supports(selection.model())).isTrue();
-                });
+                })
+                .contains(
+                        "google::gemini-3.8-flash",
+                        "google::gemini-3.6-flash",
+                        "anthropic::claude-fable-5-1",
+                        "openrouter::z-ai/glm-5.3-flash",
+                        "groq::qwen/qwen3.8-27b",
+                        "together::moonshotai/Kimi-K3",
+                        "cerebras::gemma-4-31b"
+                );
     }
 
     @Test
@@ -46,9 +55,9 @@ class AiProviderSelectionTest {
             formModels.add(matcher.group(1));
         }
 
-        assertThat(optionCount).isEqualTo(27);
+        assertThat(optionCount).isEqualTo(51);
         assertThat(formModels)
-                .hasSize(27)
+                .hasSize(51)
                 .containsExactlyElementsOf(AiProviderSelection.supportedValues());
     }
 

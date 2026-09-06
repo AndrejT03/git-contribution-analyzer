@@ -60,14 +60,18 @@ class AnalysisControllerTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("label=\"OpenAI\"")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("label=\"Anthropic Claude\"")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("label=\"OpenRouter\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("google::gemini-3.5-flash")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("google::gemini-3.6-flash")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("google::gemini-3.8-flash")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("openrouter::z-ai/glm-5.3-flash")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("openai::gpt-5.6-terra")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("AI API key are used only")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Your selected AI model classifies")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("data-reveal-on-scroll")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("data-reveal-group")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("aria-invalid=\"false\"")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=30.0")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=30.0")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=32.0")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=32.0")));
     }
 
     @Test
@@ -167,9 +171,22 @@ class AnalysisControllerTest {
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("id=\"progressStageNumber\"")
                 )))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("data-reveal-group=\"load\"")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=30.0")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=30.0")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("class=\"ring__svg\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("viewBox=\"0 0 260 260\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.matchesPattern(
+                        "(?s).*<circle\\b(?=[^>]*id=\"ringProgressArc\")"
+                                + "(?=[^>]*pathLength=\"100\")(?=[^>]*stroke-dashoffset=\"45\")[^>]*>.*"
+                )))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("class=\"stepper-scroll\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("class=\"stepper\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.matchesPattern(
+                        "(?s).*<ol\\b(?=[^>]*class=\"stage-list\")[^>]*>.*"
+                )))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/analysis-progress.css?v=3")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("/css/style.css")
+                )))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=32.0")));
     }
 
     @Test
@@ -196,8 +213,8 @@ class AnalysisControllerTest {
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("id=\"progressStageNumber\"")
                 )))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "<h1 id=\"progressStage\">Queued</h1>"
+                .andExpect(content().string(org.hamcrest.Matchers.matchesPattern(
+                        "(?s).*<h1\\b(?=[^>]*id=\"progressStage\")[^>]*>Queued</h1>.*"
                 )));
     }
 
@@ -283,12 +300,17 @@ class AnalysisControllerTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "data-stage-name=\"ANALYZING_WITH_AI\""
                 )))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("class=\" is-skipped\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.matchesPattern(
+                        "(?s).*<li\\b(?=[^>]*data-stage-name=\"ANALYZING_WITH_AI\")"
+                                + "(?=[^>]*class=\"[^\"]*\\bis-skipped\\b[^\"]*\")[^>]*>.*"
+                )))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "data-stage-name=\"LOCAL_FALLBACK\""
                 )))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "aria-current=\"step\" class=\" is-current\""
+                .andExpect(content().string(org.hamcrest.Matchers.matchesPattern(
+                        "(?s).*<li\\b(?=[^>]*data-stage-name=\"LOCAL_FALLBACK\")"
+                                + "(?=[^>]*class=\"[^\"]*\\bis-current\\b[^\"]*\")"
+                                + "(?=[^>]*aria-current=\"step\")[^>]*>.*"
                 )));
     }
 
@@ -392,8 +414,8 @@ class AnalysisControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(view().name("error-page"))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("We couldn&#39;t process that request")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=30.0")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=30.0")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=32.0")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=32.0")))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("data-error-preview=\"400\""))));
     }
@@ -467,8 +489,8 @@ class AnalysisControllerTest {
                 )))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("data-reveal-on-scroll")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("data-reveal-group")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=30.0")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=30.0")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/style.css?v=32.0")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/app.js?v=32.0")));
     }
 
     @Test
@@ -571,8 +593,8 @@ class AnalysisControllerTest {
     }
 
     @Test
-    void servesTheVersionedPhaseThirtyStylesheetWithCompactAnimatedInteractionStates() throws Exception {
-        mockMvc.perform(get("/css/style.css").param("v", "30.0"))
+    void servesTheSharedStylesheetForHomeReportAndErrorPages() throws Exception {
+        mockMvc.perform(get("/css/style.css").param("v", "31.5"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith("text/css"))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("--blue: #0071e3")))
@@ -581,25 +603,16 @@ class AnalysisControllerTest {
                         "backdrop-filter: saturate(165%) blur(18px)"
                 )))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(".home-body .home-hero__content")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString(".progress-body .site-header")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(".report-body {")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(".error-body {")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        ".progress-experience.is-advancing"
-                )))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        ".stage-list li.is-skipped"
-                )))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("--field-border: #8e8e93")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(".ai-settings-grid")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(".secret-input__toggle")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(".form-field select:focus")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(".reveal-ready [data-reveal]")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("[data-reveal-group].is-revealed")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "grid-template-columns: repeat(9, minmax(0, 1fr))"
-                )))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("@keyframes progress-ring-spin")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("--reveal-duration: 640ms")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(".is-page-leaving")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("@keyframes bar-grow")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("prefers-reduced-motion: reduce")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
@@ -609,19 +622,29 @@ class AnalysisControllerTest {
                         "oklch(57% 0.16 var(--contributor-hue, 210deg))"
                 )))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
-                        org.hamcrest.Matchers.containsString("--progress-stop")
-                )))
-                .andExpect(content().string(org.hamcrest.Matchers.not(
-                        org.hamcrest.Matchers.containsString("@keyframes progress-aura")
-                )))
-                .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("zoom: 1.25")
                 )));
     }
 
     @Test
+    void servesTheReferenceProgressStylesWithASvgRingAndScrollableNineStagePipeline() throws Exception {
+        mockMvc.perform(get("/css/analysis-progress.css").param("v", "3"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith("text/css"))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(".ring__svg")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("width: 260px")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(".stepper-scroll")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("overflow-x: auto")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "grid-template-columns: repeat(9, minmax(0, 1fr))"
+                )))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("min-width: 860px")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("prefers-reduced-motion: reduce")));
+    }
+
+    @Test
     void servesLiveProgressReplayAndAuthoritativeStageStateContracts() throws Exception {
-        mockMvc.perform(get("/js/app.js").param("v", "28.0"))
+        mockMvc.perform(get("/js/app.js").param("v", "32.0"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "if (element && element.textContent !== text)"
@@ -633,7 +656,7 @@ class AnalysisControllerTest {
                         "progressRoot.classList.add(\"is-reconnecting\")"
                 )))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "const INITIAL_STAGE_HOLD_MS = motionIsReduced ? 0 : 650"
+                        "const INITIAL_STAGE_HOLD_MS = motionIsReduced ? 0 : 700"
                 )))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "progressRoot.dataset.replayFromStart === \"true\""
@@ -642,7 +665,7 @@ class AnalysisControllerTest {
                         "window.matchMedia?.(\"(prefers-reduced-motion: reduce)\")"
                 )))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "window.location.replace(reportUrl)"
+                        "navigateWithTransition(reportUrl, {replace: true})"
                 )))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "job.stageStates[item.dataset.stageName]"
@@ -661,12 +684,24 @@ class AnalysisControllerTest {
                 )))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "API key cleared because the provider changed"
+                )))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "const groupTargets = Array.from(document.querySelectorAll(\"[data-reveal-group]\"))"
+                )))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "--reveal-item-delay"
+                )))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "document.documentElement.classList.add(\"page-transition-ready\")"
+                )))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "elapsed * elapsed * elapsed"
                 )));
     }
 
     @Test
     void servesPreviewFixturesSeparatelyFromTheProductionScript() throws Exception {
-        mockMvc.perform(get("/js/design-preview.js").param("v", "28.0"))
+        mockMvc.perform(get("/js/design-preview.js").param("v", "31.5"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "window.gitContributionDesignPreview"
@@ -678,4 +713,5 @@ class AnalysisControllerTest {
                         "previewQuery.get(\"preview\") === \"reconnecting\""
                 )));
     }
+
 }

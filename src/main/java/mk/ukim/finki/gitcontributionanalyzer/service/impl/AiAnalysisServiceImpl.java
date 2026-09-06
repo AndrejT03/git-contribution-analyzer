@@ -1,6 +1,5 @@
 package mk.ukim.finki.gitcontributionanalyzer.service.impl;
 import jakarta.validation.Validator;
-import mk.ukim.finki.gitcontributionanalyzer.config.AppSettings;
 import mk.ukim.finki.gitcontributionanalyzer.dto.*;
 import mk.ukim.finki.gitcontributionanalyzer.enums.AiProvider;
 import mk.ukim.finki.gitcontributionanalyzer.enums.CommitCategory;
@@ -11,22 +10,10 @@ import mk.ukim.finki.gitcontributionanalyzer.model.AiProviderSelection;
 import mk.ukim.finki.gitcontributionanalyzer.model.RepositoryData;
 import mk.ukim.finki.gitcontributionanalyzer.service.AiAnalysisService;
 import mk.ukim.finki.gitcontributionanalyzer.service.AiProviderClient;
-import org.springframework.http.MediaType;
-import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.ResourceAccessException;
-import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestClientResponseException;
 import tools.jackson.core.JacksonException;
-import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
-import java.net.SocketTimeoutException;
-import java.net.http.HttpClient;
-import java.net.http.HttpTimeoutException;
-import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.TimeoutException;
 
 @Service
 public class AiAnalysisServiceImpl implements AiAnalysisService {

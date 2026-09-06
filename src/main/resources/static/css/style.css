@@ -35,8 +35,10 @@
     0 12px 34px rgba(15, 23, 42, 0.09);
     --shadow-raised: 0 2px 5px rgba(15, 23, 42, 0.05),
     0 20px 48px rgba(15, 23, 42, 0.13);
-    --reveal-duration: 560ms;
-    --reveal-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --transition-surface: #f5f5f7;
+    --reveal-duration: 640ms;
+    --reveal-ease: cubic-bezier(0.16, 1, 0.3, 1);
+    --motion-ease: cubic-bezier(0.2, 0, 0, 1);
     --page-content-width: 920px;
     --focused-content-width: 600px;
     --wide-page-content-width: 1200px;
@@ -60,7 +62,7 @@ body {
     color: var(--ink);
     background: var(--surface);
     font-family: var(--system-font);
-    font-size: 15px;
+    font-size: 16px;
     line-height: 1.45;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
@@ -115,7 +117,6 @@ button {
     border: 0 !important;
 }
 
-/* Progressive reveal: content stays visible without JavaScript. */
 .reveal-ready [data-reveal],
 .reveal-ready [data-reveal-on-scroll],
 .reveal-ready [data-reveal-group] > * {
@@ -133,7 +134,43 @@ button {
     animation-delay: calc(var(--reveal-delay, 0ms) + var(--reveal-item-delay, 0ms));
 }
 
-/* Shared header */
+.page-transition-ready body::after {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    content: "";
+    pointer-events: none;
+    background: var(--transition-surface);
+    opacity: 0;
+    transition: opacity 380ms var(--motion-ease);
+}
+
+.page-transition-ready body > .site-header,
+.page-transition-ready body > main,
+.page-transition-ready body > .site-footer {
+    transition: opacity 320ms var(--motion-ease),
+    translate 380ms var(--motion-ease);
+}
+
+.page-transition-ready body.is-page-leaving {
+    pointer-events: none;
+}
+
+.page-transition-ready body.is-page-leaving::after {
+    opacity: 1;
+}
+
+.page-transition-ready body.is-page-leaving > .site-header {
+    opacity: 0;
+    translate: 0 -5px;
+}
+
+.page-transition-ready body.is-page-leaving > main,
+.page-transition-ready body.is-page-leaving > .site-footer {
+    opacity: 0;
+    translate: 0 7px;
+}
+
 .site-header {
     position: relative;
     z-index: 5;
@@ -189,7 +226,7 @@ button {
 }
 
 .site-brand__name {
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 650;
     letter-spacing: -0.02em;
 }
@@ -206,7 +243,7 @@ button {
 
 .site-header__link {
     color: #424245;
-    font-size: 14px;
+    font-size: 15px;
     text-decoration: none;
     transition: color 160ms ease;
 }
@@ -215,7 +252,6 @@ button {
     color: var(--blue);
 }
 
-/* Landing */
 .home-body {
     background:
             radial-gradient(circle at 50% 8%, rgba(0, 113, 227, 0.075), transparent 31rem),
@@ -236,14 +272,14 @@ button {
 .report-kicker {
     margin: 0;
     color: var(--blue);
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 650;
     letter-spacing: -0.015em;
 }
 
 .home-hero h1 {
     margin: 17px auto 16px;
-    font-size: clamp(40px, 4vw, 54px);
+    font-size: clamp(42px, 4vw, 56px);
     font-weight: 720;
     line-height: 1.03;
     letter-spacing: -0.015em;
@@ -253,7 +289,7 @@ button {
 .home-hero__lead {
     margin: 0;
     color: var(--muted);
-    font-size: 18px;
+    font-size: 19px;
     line-height: 1.55;
     letter-spacing: 0.012em;
     transform: translateY(-1px);
@@ -271,7 +307,7 @@ button {
     align-items: center;
     gap: 5px;
     color: var(--blue);
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 600;
     text-decoration: none;
 }
@@ -282,8 +318,8 @@ button {
 }
 
 .hero-actions i {
-    font-size: 13px;
-    transition: transform 160ms ease;
+    font-size: 14px;
+    transition: transform 220ms var(--motion-ease);
 }
 
 .hero-actions a:hover i {
@@ -298,7 +334,7 @@ button {
     gap: 28px;
     color: var(--muted);
     list-style: none;
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .trust-row li {
@@ -309,7 +345,7 @@ button {
 
 .trust-row i {
     color: #9b9ba0;
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .analysis-section {
@@ -319,7 +355,7 @@ button {
 
 .section-intro h2 {
     margin: 0;
-    font-size: 34px;
+    font-size: 35px;
     font-weight: 700;
     line-height: 1.12;
     letter-spacing: 0;
@@ -328,7 +364,7 @@ button {
 .section-intro p {
     margin: 14px 0 0;
     color: var(--muted);
-    font-size: 15px;
+    font-size: 16px;
     line-height: 1.55;
 }
 
@@ -357,7 +393,7 @@ button {
     display: block;
     margin-bottom: 7px;
     color: #2c2c2e;
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 680;
     letter-spacing: -0.01em;
 }
@@ -371,7 +407,7 @@ button {
 
 .field-label-row span {
     color: var(--tertiary);
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .form-field input,
@@ -384,21 +420,21 @@ button {
     outline: none;
     background: linear-gradient(180deg, #ffffff 0%, var(--field-surface) 100%);
     box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.035);
-    transition: border-color 160ms ease,
-    background 160ms ease,
-    box-shadow 160ms ease;
+    transition: border-color 220ms var(--motion-ease),
+    background 220ms var(--motion-ease),
+    box-shadow 240ms var(--motion-ease);
 }
 
 .form-field input {
     height: 44px;
     padding: 0 12px;
-    font-size: 14px;
+    font-size: 15px;
 }
 
 .form-field select {
     height: 44px;
     padding: 0 11px;
-    font-size: 14px;
+    font-size: 15px;
 }
 
 .form-field select:required:invalid {
@@ -418,7 +454,7 @@ button {
     min-height: 104px;
     padding: 11px 12px;
     resize: vertical;
-    font-size: 14px;
+    font-size: 15px;
     line-height: 1.45;
 }
 
@@ -530,8 +566,8 @@ button {
     color: var(--tertiary);
     border-radius: 9px;
     background: transparent;
-    font-size: 15px;
-    transition: color 160ms ease, background-color 160ms ease;
+    font-size: 16px;
+    transition: color 220ms var(--motion-ease), background-color 220ms var(--motion-ease);
 }
 
 .secret-input__toggle:hover {
@@ -551,7 +587,7 @@ button {
     border: 1px solid var(--info-line);
     border-radius: 999px;
     background: var(--info-surface);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 650;
     line-height: 1.3;
     text-overflow: ellipsis;
@@ -562,7 +598,7 @@ button {
 .field-error {
     display: block;
     margin-top: 6px;
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1.4;
 }
 
@@ -590,14 +626,16 @@ button {
     0 4px 12px rgba(0, 102, 204, 0.2);
     font-weight: 600;
     text-decoration: none;
-    transition: background 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+    transition: background 220ms var(--motion-ease),
+    transform 220ms var(--motion-ease),
+    box-shadow 260ms var(--motion-ease);
 }
 
 .primary-button {
     width: 100%;
     height: 44px;
     padding: 0 22px;
-    font-size: 14px;
+    font-size: 15px;
 }
 
 .primary-button:hover,
@@ -626,7 +664,7 @@ button {
     margin: 13px 0 0;
     color: var(--muted);
     text-align: center;
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .privacy-note i {
@@ -672,7 +710,7 @@ button {
     align-items: center;
     gap: 11px;
     color: var(--tertiary);
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .how-card__step i {
@@ -683,7 +721,7 @@ button {
 
 .how-card h3 {
     margin: 20px 0 8px;
-    font-size: 18px;
+    font-size: 19px;
     line-height: 1.2;
     letter-spacing: -0.025em;
 }
@@ -691,7 +729,7 @@ button {
 .how-card p {
     margin: 0;
     color: var(--muted);
-    font-size: 14px;
+    font-size: 15px;
     line-height: 1.5;
 }
 
@@ -708,10 +746,9 @@ button {
     padding: 0 24px;
     color: var(--tertiary);
     text-align: center;
-    font-size: 12px;
+    font-size: 13px;
 }
 
-/* Submit feedback */
 .loading-overlay {
     position: fixed;
     inset: 0;
@@ -736,13 +773,13 @@ button {
 
 .loading-card h2 {
     margin: 16px 0 6px;
-    font-size: 20px;
+    font-size: 21px;
 }
 
 .loading-card p {
     margin: 0;
     color: var(--muted);
-    font-size: 14px;
+    font-size: 15px;
     line-height: 1.5;
 }
 
@@ -753,10 +790,9 @@ button {
     border: 3px solid var(--line-strong);
     border-top-color: var(--blue);
     border-radius: 50%;
-    animation: spin 760ms linear infinite;
+    animation: spin 960ms linear infinite;
 }
 
-/* Progress */
 .progress-body {
     --progress-page: #f5f7fa;
     --progress-ink: #0d1220;
@@ -764,6 +800,7 @@ button {
     --progress-line: #e6e9ef;
     --progress-blue: #2f6bff;
     --progress-green: #16a34a;
+    --transition-surface: #f5f7fa;
     background:
             radial-gradient(circle at 50% 31%, rgba(47, 107, 255, 0.095), transparent 27rem),
             var(--progress-page);
@@ -786,6 +823,7 @@ button {
 
 .progress-body .site-brand__name {
     color: var(--progress-ink);
+    font-size: 17px;
 }
 
 .progress-body .site-brand__name span {
@@ -794,15 +832,35 @@ button {
 
 .progress-page {
     min-height: calc(100vh - 49px);
-    padding: 22px 24px 6px;
+    padding: 44px 24px 24px;
 }
 
 .progress-experience {
     position: relative;
-    width: min(var(--page-content-width), 100%);
+    width: min(1040px, 100%);
     margin: 0 auto;
     color: var(--progress-ink);
     text-align: center;
+}
+
+.progress-context {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--progress-line);
+    text-align: left;
+}
+
+.progress-summary {
+    display: grid;
+    grid-template-columns: 248px minmax(0, 480px);
+    justify-content: center;
+    align-items: center;
+    gap: 48px;
+    padding: 32px 24px;
+    text-align: left;
 }
 
 .preview-badge {
@@ -814,39 +872,42 @@ button {
     color: #ffffff;
     background: rgba(13, 18, 32, 0.75);
     box-shadow: 0 3px 9px rgba(0, 0, 0, 0.24);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     line-height: 1.2;
 }
 
 .connection-state {
-    min-height: 18px;
+    min-height: 28px;
+    padding: 3px 10px;
     display: inline-flex;
+    flex-shrink: 0;
     align-items: center;
     justify-content: center;
     gap: 7px;
-    color: var(--progress-muted);
+    color: #476084;
+    background: #eaf0fa;
     border-radius: 999px;
-    font-size: 12px;
-    line-height: 18px;
-    transition: color 160ms ease, background 160ms ease, padding 160ms ease;
+    font-size: 15px;
+    line-height: 22px;
+    transition: color 240ms var(--motion-ease),
+    background 240ms var(--motion-ease),
+    padding 240ms var(--motion-ease);
 }
 
 .connection-state__normal {
-    font-size: 12px;
-    animation: spin 1.5s linear infinite;
+    font-size: 15px;
+    animation: spin 1.8s linear infinite;
 }
 
 .connection-state__reconnect,
 .connection-state__failure,
 .connection-state__complete {
     display: none;
-    font-size: 13px;
+    font-size: 15px;
 }
 
 .progress-experience.is-reconnecting .connection-state {
-    min-height: 26px;
-    padding: 0 10px;
     color: var(--orange);
     background: var(--warning-surface);
 }
@@ -860,32 +921,33 @@ button {
 }
 
 .progress-repository {
-    margin: 4px 0 0;
+    min-width: 0;
+    margin: 0;
     color: var(--progress-ink);
     font-family: var(--mono-font);
-    font-size: 15px;
-    line-height: 20px;
+    font-size: 18px;
+    line-height: 25px;
     letter-spacing: 0;
     overflow-wrap: anywhere;
 }
 
 .progress-ring {
+    --progress-angle: 0deg;
+    --ring-color: #2f6bff;
+    --ring-track: #dfe7f5;
+    --ring-thickness: 16px;
     position: relative;
-    width: 184px;
-    height: 184px;
-    margin: 18px auto 0;
+    width: 248px;
+    height: 248px;
+    margin: 0;
     display: grid;
     place-items: center;
     border-radius: 50%;
-    overflow: hidden;
-    background: #dce6ff;
     isolation: isolate;
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.82),
-    0 18px 38px rgba(47, 107, 255, 0.2),
-    0 0 0 1px rgba(47, 107, 255, 0.06);
-    transition: filter 420ms ease,
-    box-shadow 560ms cubic-bezier(0.4, 0, 0.2, 1),
-    transform 560ms cubic-bezier(0.4, 0, 0.2, 1);
+    background: var(--ring-track);
+    box-shadow: 0 12px 34px rgba(47, 107, 255, 0.1);
+    transition: filter 420ms var(--motion-ease),
+    box-shadow 520ms var(--reveal-ease);
 }
 
 .progress-ring::before {
@@ -893,15 +955,33 @@ button {
     inset: 0;
     content: "";
     border-radius: inherit;
-    background: conic-gradient(
-            from 0deg,
-            rgba(47, 107, 255, 0.14) 0deg,
-            var(--progress-blue) 72deg,
-            var(--progress-blue) 170deg,
-            rgba(47, 107, 255, 0.14) 262deg,
-            rgba(47, 107, 255, 0.14) 360deg
-    );
-    animation: progress-ring-spin 1.65s linear infinite;
+    z-index: 0;
+    background: conic-gradient(var(--ring-color) var(--progress-angle), var(--ring-track) 0deg);
+}
+
+.progress-ring__orbit {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border-radius: inherit;
+    transform: rotate(var(--progress-angle));
+}
+
+.progress-ring__orbit::before {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: var(--ring-thickness);
+    height: var(--ring-thickness);
+    margin-left: calc(var(--ring-thickness) / -2);
+    content: "";
+    border-radius: 50%;
+    background: var(--ring-color);
+    animation: progress-endpoint-pulse 2.8s ease-in-out infinite;
+}
+
+.progress-ring[aria-valuenow="0"] .progress-ring__orbit {
+    visibility: hidden;
 }
 
 .progress-experience.is-reconnecting .progress-ring {
@@ -910,17 +990,30 @@ button {
 
 .progress-ring::after {
     position: absolute;
-    inset: 9px;
+    inset: var(--ring-thickness);
+    z-index: 2;
     content: "";
-    border: 9px solid #c5d5fc;
+    border: 0;
     border-radius: 50%;
     background: linear-gradient(145deg, #fbfcff 0%, #f1f5fc 100%);
-    box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.035);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.58),
+    0 0 0 2px rgba(47, 107, 255, 0.08),
+    inset 0 1px 3px rgba(15, 23, 42, 0.035);
 }
 
 .progress-ring__inner {
     position: relative;
-    z-index: 2;
+    z-index: 3;
+    text-align: center;
+}
+
+.progress-ring__caption {
+    display: block;
+    margin-top: 12px;
+    color: var(--progress-muted);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
 }
 
 .progress-ring__value {
@@ -931,7 +1024,7 @@ button {
 
 .progress-ring__value strong {
     color: var(--progress-ink);
-    font-size: 52px;
+    font-size: 70px;
     font-weight: 780;
     font-variant-numeric: tabular-nums;
     line-height: 0.92;
@@ -941,44 +1034,62 @@ button {
 .progress-ring__value span {
     margin-left: 4px;
     color: var(--progress-muted);
-    font-size: 20px;
+    font-size: 27px;
     font-weight: 650;
 }
 
-.progress-copy h1 {
-    margin: 14px 0 6px;
-    color: var(--progress-ink);
-    font-size: 30px;
-    font-weight: 760;
-    line-height: 1.12;
-    letter-spacing: -0.033em;
+.progress-copy {
+    min-width: 0;
 }
 
-.progress-copy p {
-    max-width: 520px;
-    min-height: 20px;
-    margin: 0 auto;
-    color: var(--progress-muted);
-    font-size: 14px;
-    line-height: 20px;
-    letter-spacing: -0.01em;
+.progress-copy .progress-copy__eyebrow {
+    margin: 0 0 12px;
+    color: #476084;
+    font-size: 12px;
+    font-weight: 650;
+    line-height: 18px;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+}
+
+.progress-copy h1 {
+    min-height: 88px;
+    margin: 0 0 12px;
+    display: flex;
+    align-items: center;
+    color: var(--progress-ink);
+    font-size: clamp(32px, 3.2vw, 40px);
+    font-weight: 760;
+    line-height: 1.1;
+    letter-spacing: -0.033em;
+    text-wrap: balance;
+}
+
+.progress-copy #progressMessage {
+    min-height: 78px;
+    margin: 0;
+    color: #626e81;
+    font-size: 17px;
+    line-height: 26px;
+    text-wrap: pretty;
+    overflow-wrap: anywhere;
 }
 
 .analysis-pipeline {
     width: 100%;
-    margin: 22px auto 0;
-    padding: 16px 20px 17px;
+    margin: 8px auto 0;
+    padding: 24px;
     text-align: left;
     border: 1px solid rgba(100, 116, 139, 0.14);
-    border-radius: 14px;
+    border-radius: 16px;
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, #fcfdff 100%);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.96),
     0 2px 5px rgba(13, 18, 32, 0.05),
-    0 20px 46px rgba(13, 18, 32, 0.15);
+    0 14px 36px rgba(13, 18, 32, 0.07);
 }
 
 .analysis-pipeline__header {
-    height: 17px;
+    height: 20px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -989,9 +1100,9 @@ button {
 .analysis-pipeline__header h2,
 .analysis-pipeline__header p {
     margin: 0;
-    font-size: 11px;
+    font-size: 14px;
     font-weight: 600;
-    line-height: 17px;
+    line-height: 20px;
 }
 
 .analysis-pipeline__header h2 {
@@ -1007,8 +1118,8 @@ button {
 .stage-list {
     position: relative;
     width: 100%;
-    height: 76px;
-    margin: 16px 0 0;
+    min-height: 112px;
+    margin: 24px 0 0;
     padding: 0;
     display: grid;
     grid-template-columns: repeat(9, minmax(0, 1fr));
@@ -1020,24 +1131,24 @@ button {
     position: relative;
     min-width: 0;
     display: grid;
-    grid-template-rows: 22px 34px 18px;
+    grid-template-rows: 30px minmax(48px, auto) auto;
     justify-items: center;
-    color: color-mix(in srgb, var(--progress-ink) 52%, transparent);
-    font-size: 11px;
+    color: #657084;
+    font-size: 14px;
     font-weight: 450;
-    line-height: 13px;
-    transition: color 360ms ease;
+    line-height: 16px;
+    transition: color 420ms var(--motion-ease);
 }
 
 .stage-list li::after {
     position: absolute;
-    top: 10px;
+    top: 12px;
     left: 50%;
     z-index: 0;
     width: 100%;
     content: "";
     border-top: 2px solid var(--progress-line);
-    transition: border-color 360ms ease;
+    transition: border-color 420ms var(--motion-ease);
 }
 
 .stage-list li.stage-list__completion::after {
@@ -1050,6 +1161,8 @@ button {
 
 .stage-list li.is-complete::after {
     border-top-color: var(--progress-green);
+    transform-origin: left center;
+    animation: stage-connector-draw 680ms 90ms var(--reveal-ease) both;
 }
 
 .stage-list li.is-current {
@@ -1058,14 +1171,14 @@ button {
 }
 
 .stage-list li.is-skipped {
-    color: color-mix(in srgb, var(--progress-ink) 45%, transparent);
+    color: #737d8e;
 }
 
 .stage-list li.is-skipped::after {
     border-top-color: var(--progress-line);
 }
 
-@media (min-width: 761px) {
+@media (min-width: 901px) {
     .stage-list li.is-complete:has(+ li.is-skipped)::after {
         width: 50%;
     }
@@ -1078,8 +1191,8 @@ button {
 }
 
 .stage-label {
-    max-width: 80px;
-    padding-top: 7px;
+    max-width: 100px;
+    padding: 8px 3px 0;
     display: block;
 }
 
@@ -1091,19 +1204,19 @@ button {
 .stage-status {
     position: relative;
     z-index: 1;
-    width: 22px;
-    height: 22px;
+    width: 26px;
+    height: 26px;
     display: grid;
     place-items: center;
     color: #ffffff;
     border: 2px solid var(--progress-line);
     border-radius: 50%;
     background: #ffffff;
-    transition: color 360ms ease,
-    border-color 360ms ease,
-    background-color 360ms ease,
-    box-shadow 520ms ease,
-    transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
+    transition: color 420ms var(--motion-ease),
+    border-color 420ms var(--motion-ease),
+    background-color 420ms var(--motion-ease),
+    box-shadow 640ms var(--reveal-ease),
+    transform 640ms var(--reveal-ease);
 }
 
 .stage-status i {
@@ -1114,39 +1227,44 @@ button {
     color: #9ca3af;
     border-style: dashed;
     background: #ffffff;
-    animation: stage-skip-in 340ms cubic-bezier(0.22, 1, 0.36, 1);
+    animation: stage-skip-in 440ms var(--reveal-ease);
 }
 
 .stage-list li.is-skipped .stage-status__skipped {
     display: inline;
-    font-size: 11px;
+    font-size: 14px;
     line-height: 1;
 }
 
 .stage-list li.is-complete .stage-status {
     border-color: var(--progress-green);
     background: var(--progress-green);
-    animation: stage-check-in 460ms cubic-bezier(0.22, 1, 0.36, 1);
+    animation: stage-check-in 680ms var(--reveal-ease);
 }
 
 .stage-list li.is-complete .stage-status__check {
-    display: inline;
-    font-size: 12px;
+    display: inline-block;
+    font-size: 15px;
     line-height: 1;
+    transform-origin: center;
+    animation: stage-check-reveal 560ms 80ms var(--reveal-ease) both;
 }
 
 .stage-list li.is-current .stage-status {
     border: 0;
     background: var(--progress-blue);
-    box-shadow: 0 0 0 4px #dce6ff, 0 3px 8px rgba(47, 107, 255, 0.24);
-    animation: stage-current-pulse 2.6s ease-in-out infinite;
+    box-shadow: 0 0 0 5px #dce6ff, 0 4px 10px rgba(47, 107, 255, 0.25);
+    animation: stage-current-arrive 650ms var(--reveal-ease) both,
+    stage-current-pulse 3.6s 650ms cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 
 .stage-list li.is-current .stage-status__current {
-    display: inline;
+    display: inline-block;
     color: #ffffff;
-    font-size: 6px;
+    font-size: 9px;
     line-height: 1;
+    transform-origin: center;
+    animation: stage-current-dot-in 480ms 90ms var(--reveal-ease) both;
 }
 
 .progress-experience.is-reconnecting .stage-list li.is-current .stage-status__current {
@@ -1156,32 +1274,33 @@ button {
 .progress-experience.is-reconnecting .stage-list li.is-current .stage-status__reconnect {
     display: inline;
     color: #ffffff;
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1;
 }
 
 .stage-badges {
     min-width: 0;
-    min-height: 18px;
-    padding-top: 4px;
+    min-height: 22px;
+    padding-top: 5px;
     display: flex;
     align-items: flex-start;
     justify-content: center;
+    flex-wrap: wrap;
     gap: 4px;
 }
 
 .stage-badge {
-    min-height: 18px;
-    padding: 0 4px;
+    min-height: 20px;
+    padding: 0 6px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     border: 1px solid currentColor;
     border-radius: 3px;
     font-family: var(--mono-font);
-    font-size: 8px;
+    font-size: 11px;
     font-weight: 500;
-    line-height: 16px;
+    line-height: 18px;
     letter-spacing: 0.04em;
     text-transform: uppercase;
     white-space: nowrap;
@@ -1205,31 +1324,31 @@ button {
     text-transform: lowercase;
 }
 
-.stage-list li.is-current .stage-badge--running {
+.progress-experience:not(.is-failed):not(.is-reconnecting) .stage-list li.is-current .stage-badge--running {
     display: inline-flex;
 }
 
 .progress-footnote {
-    margin: 12px 0 0;
-    padding: 10px 0 0;
+    margin: 16px 0 0;
+    padding: 16px 0 0;
     display: flex;
     align-items: flex-start;
     gap: 8px;
     color: var(--progress-muted);
     border-top: 1px solid var(--progress-line);
-    font-size: 11px;
-    line-height: 17px;
+    font-size: 14px;
+    line-height: 20px;
 }
 
 .progress-footnote > i {
     width: 12px;
-    height: 17px;
+    height: 19px;
     flex: 0 0 12px;
     margin-top: 0;
     display: grid;
     place-items: center;
     color: var(--progress-blue);
-    font-size: 12px;
+    font-size: 15px;
     line-height: 1;
 }
 
@@ -1250,7 +1369,7 @@ button {
     border: 1px solid var(--critical-line);
     border-radius: 12px;
     background: var(--critical-surface);
-    font-size: 11px;
+    font-size: 12px;
 }
 
 .progress-failure > i {
@@ -1277,7 +1396,7 @@ button {
     width: auto;
     min-height: 36px;
     padding: 0 15px;
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .secondary-action {
@@ -1296,7 +1415,7 @@ button {
     justify-content: center;
     gap: 8px;
     color: var(--tertiary);
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .progress-preview button,
@@ -1306,13 +1425,13 @@ button {
     color: #5d5d62;
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.9);
-    font-size: 12px;
+    font-size: 13px;
     box-shadow: inset 0 0 0 1px rgba(210, 210, 215, 0.52),
     0 2px 7px rgba(15, 23, 42, 0.05);
-    transition: color 160ms ease,
-    background 160ms ease,
-    box-shadow 180ms ease,
-    transform 180ms var(--reveal-ease);
+    transition: color 220ms var(--motion-ease),
+    background 220ms var(--motion-ease),
+    box-shadow 240ms var(--motion-ease),
+    transform 240ms var(--reveal-ease);
 }
 
 .progress-preview button:hover,
@@ -1330,30 +1449,30 @@ button {
 }
 
 .progress-experience.is-failed .progress-ring {
-    background: #f7dfe3;
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8),
-    0 18px 38px rgba(209, 41, 61, 0.17),
-    0 0 0 1px rgba(209, 41, 61, 0.06);
+    --ring-color: var(--red);
+    --ring-track: #f2dfe4;
+    box-shadow: 0 12px 34px rgba(209, 41, 61, 0.08);
 }
 
-.progress-experience.is-failed .progress-ring::before {
-    background: conic-gradient(
-            from 0deg,
-            rgba(209, 41, 61, 0.16) 0deg,
-            var(--red) 82deg,
-            var(--red) 190deg,
-            rgba(209, 41, 61, 0.16) 278deg,
-            rgba(209, 41, 61, 0.16) 360deg
-    );
+.progress-experience.is-failed .progress-ring__orbit,
+.progress-experience.is-complete .progress-ring__orbit {
+    opacity: 0;
+}
+
+.progress-experience.is-failed .progress-ring__orbit::before,
+.progress-experience.is-complete .progress-ring__orbit::before,
+.progress-experience.is-failed .stage-list li.is-current .stage-status,
+.progress-experience.is-reconnecting .stage-list li.is-current .stage-status {
     animation: none;
 }
 
-.progress-experience.is-failed .progress-ring::after {
-    border-color: #f5c9cf;
+.progress-experience.is-reconnecting .progress-ring__orbit::before {
+    animation-play-state: paused;
 }
 
 .progress-experience.is-complete .connection-state {
-    color: var(--progress-blue);
+    color: #187641;
+    background: var(--success-surface);
 }
 
 .progress-experience.is-complete .connection-state__normal {
@@ -1366,39 +1485,19 @@ button {
 }
 
 .progress-experience.is-complete .progress-ring {
-    background: #d6efdf;
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8),
-    0 18px 38px rgba(22, 163, 74, 0.19),
-    0 0 0 1px rgba(22, 163, 74, 0.06);
+    --ring-color: var(--progress-green);
+    --ring-track: #d6efdf;
+    box-shadow: 0 12px 34px rgba(22, 163, 74, 0.1);
 }
 
-.progress-experience.is-complete .progress-ring::before {
-    background: var(--progress-green);
-    animation: none;
-}
-
-.progress-experience.is-complete .progress-ring::after {
-    border-color: #bce4ca;
-}
-
-.progress-experience.is-advancing .progress-ring__value strong {
-    animation: progress-number 420ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.progress-experience.is-advancing .progress-copy h1,
-.progress-experience.is-advancing .progress-copy p {
-    animation: progress-copy-in 420ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.progress-experience.is-advancing .progress-ring {
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.84),
-    0 21px 43px rgba(47, 107, 255, 0.25),
-    0 0 0 1px rgba(47, 107, 255, 0.08);
-    transform: scale(1.006);
+.progress-experience.is-stage-changing .progress-copy h1,
+.progress-experience.is-stage-changing .progress-copy #progressMessage {
+    animation: progress-copy-in 460ms var(--reveal-ease);
 }
 
 .progress-experience.is-failed .connection-state {
     color: var(--red);
+    background: var(--critical-surface);
 }
 
 .progress-experience.is-failed .connection-state__normal,
@@ -1421,7 +1520,6 @@ button {
     box-shadow: 0 0 0 4px #fbe2e5;
 }
 
-/* Error */
 .error-page {
     min-height: calc(100vh - 49px);
     padding: 110px 24px 60px;
@@ -1444,7 +1542,7 @@ button {
     margin: 0;
     color: var(--tertiary);
     font-family: var(--mono-font);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     letter-spacing: 0.22em;
     text-transform: uppercase;
@@ -1487,7 +1585,7 @@ button {
 
 .error-card h1 {
     margin: 0;
-    font-size: 27px;
+    font-size: 28px;
     font-weight: 700;
     line-height: 1.25;
     letter-spacing: -0.01em;
@@ -1500,7 +1598,7 @@ button {
     max-width: none;
     margin: 13px 0 0;
     color: var(--muted);
-    font-size: 15px;
+    font-size: 16px;
     line-height: 1.55;
     transform: translateX(-50%);
 }
@@ -1511,7 +1609,7 @@ button {
     margin-top: 25px;
     padding: 0 20px;
     gap: 9px;
-    font-size: 14px;
+    font-size: 15px;
 }
 
 .error-preview {
@@ -1522,7 +1620,6 @@ button {
     min-width: 48px;
 }
 
-/* Report */
 .report-body {
     background:
             radial-gradient(circle at 50% -4%, rgba(0, 113, 227, 0.085), transparent 34rem),
@@ -1538,7 +1635,7 @@ button {
 .report-header h1 {
     margin: 15px 0 12px;
     font-family: var(--mono-font);
-    font-size: 34px;
+    font-size: 35px;
     font-weight: 650;
     line-height: 1.06;
     letter-spacing: -0.045em;
@@ -1549,7 +1646,7 @@ button {
     max-width: 820px;
     margin: 0;
     color: var(--muted);
-    font-size: 15px;
+    font-size: 16px;
     line-height: 1.5;
 }
 
@@ -1576,7 +1673,7 @@ button {
 .report-actions--header .report-action {
     min-height: 34px;
     padding: 0 11px;
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .report-action {
@@ -1591,15 +1688,15 @@ button {
     background: rgba(255, 255, 255, 0.84);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9),
     0 3px 10px rgba(15, 23, 42, 0.055);
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 650;
     line-height: 1;
     text-decoration: none;
-    transition: color 160ms ease,
-    border-color 160ms ease,
-    background 160ms ease,
-    box-shadow 160ms ease,
-    transform 160ms ease;
+    transition: color 220ms var(--motion-ease),
+    border-color 220ms var(--motion-ease),
+    background 220ms var(--motion-ease),
+    box-shadow 240ms var(--motion-ease),
+    transform 240ms var(--reveal-ease);
 }
 
 .report-action--open {
@@ -1644,7 +1741,7 @@ button {
     align-items: center;
     gap: 7px;
     border-radius: 999px;
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .report-badge--source {
@@ -1680,7 +1777,7 @@ button {
 .main-work h4,
 .category-breakdown h4 {
     color: var(--tertiary);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 650;
     letter-spacing: 0.13em;
     text-transform: uppercase;
@@ -1692,7 +1789,7 @@ button {
 
 .report-meta dd {
     margin: 0;
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 650;
     overflow-wrap: anywhere;
 }
@@ -1713,7 +1810,7 @@ button {
     border-radius: 12px;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.66),
     0 4px 13px rgba(15, 23, 42, 0.035);
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .report-alert > i {
@@ -1725,7 +1822,7 @@ button {
 .report-alert strong {
     display: block;
     margin-bottom: 4px;
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .report-alert p {
@@ -1788,7 +1885,7 @@ button {
 .report-card > p:not(.report-eyebrow) {
     margin: 0;
     color: #46464a;
-    font-size: 14px;
+    font-size: 15px;
     line-height: 1.5;
 }
 
@@ -1798,7 +1895,7 @@ button {
 
 .report-section-heading h2 {
     margin: 0;
-    font-size: 25px;
+    font-size: 26px;
     line-height: 1.2;
     letter-spacing: -0.03em;
 }
@@ -1806,7 +1903,7 @@ button {
 .report-section-heading p {
     margin: 7px 0 0;
     color: var(--muted);
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .contribution-overview {
@@ -1829,7 +1926,7 @@ button {
     grid-template-columns: 160px 1fr 44px;
     align-items: center;
     gap: 12px;
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .overview-row strong {
@@ -1868,7 +1965,7 @@ button {
     padding-top: 10px;
     color: var(--tertiary);
     border-top: 1px solid var(--line);
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .contributors-section {
@@ -1906,7 +2003,7 @@ button {
 
 .contributor-top h3 {
     margin: 0 0 4px;
-    font-size: 18px;
+    font-size: 19px;
     line-height: 1.2;
     letter-spacing: -0.02em;
 }
@@ -1915,7 +2012,7 @@ button {
     margin: 0;
     color: var(--tertiary);
     font-family: var(--mono-font);
-    font-size: 11px;
+    font-size: 12px;
     overflow-wrap: anywhere;
 }
 
@@ -1928,7 +2025,7 @@ button {
 .contributor-score span {
     padding: 5px 8px;
     border-radius: 999px;
-    font-size: 11px;
+    font-size: 12px;
     white-space: nowrap;
 }
 
@@ -1948,7 +2045,7 @@ button {
 }
 
 .contributor-score strong {
-    font-size: 20px;
+    font-size: 21px;
     line-height: 1;
 }
 
@@ -1960,7 +2057,7 @@ button {
 .contributor-summary {
     margin: 14px 0 0;
     color: var(--muted);
-    font-size: 14px;
+    font-size: 15px;
     line-height: 1.5;
 }
 
@@ -1979,7 +2076,7 @@ button {
 .main-work p,
 .empty-categories {
     margin: 0;
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1.45;
 }
 
@@ -2010,7 +2107,7 @@ button {
     align-items: center;
     gap: 4px;
     color: var(--muted);
-    font-size: 10px;
+    font-size: 11px;
     white-space: nowrap;
 }
 
@@ -2019,7 +2116,7 @@ button {
     align-items: center;
     gap: 6px;
     color: var(--muted);
-    font-size: 11px;
+    font-size: 12px;
 }
 
 .category-inline-legend li::before {
@@ -2069,7 +2166,7 @@ button {
     border: 1px solid var(--info-line);
     border-radius: 11px;
     background: var(--info-surface);
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1.45;
 }
 
@@ -2115,7 +2212,7 @@ button {
     gap: 8px;
     cursor: pointer;
     list-style: none;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
 }
 
@@ -2135,8 +2232,8 @@ button {
 .commit-details > summary > i {
     margin-left: auto;
     color: var(--tertiary);
-    font-size: 12px;
-    transition: transform 160ms ease;
+    font-size: 13px;
+    transition: transform 240ms var(--reveal-ease);
 }
 
 .commit-details[open] > summary > i {
@@ -2167,7 +2264,7 @@ button {
     background: linear-gradient(180deg, #ffffff 0%, #fafafd 100%);
     cursor: pointer;
     list-style: none;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
 }
 
@@ -2178,7 +2275,7 @@ button {
 .commit-supplementary > summary > i {
     margin-left: auto;
     color: var(--tertiary);
-    transition: transform 160ms ease;
+    transition: transform 240ms var(--reveal-ease);
 }
 
 .commit-supplementary[open] > summary > i {
@@ -2205,11 +2302,11 @@ button {
     border-radius: 7px;
     background: #ffffff;
     font-family: var(--mono-font);
-    font-size: 10px;
+    font-size: 11px;
 }
 
 .commit-title strong {
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .commit-meta {
@@ -2218,7 +2315,7 @@ button {
     align-items: center;
     gap: 7px;
     color: var(--tertiary);
-    font-size: 11px;
+    font-size: 12px;
 }
 
 .commit-category {
@@ -2248,7 +2345,7 @@ button {
 .commit-row > p {
     margin: 8px 0 0;
     color: var(--muted);
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1.4;
 }
 
@@ -2264,7 +2361,7 @@ button {
 
 .category-key h2 {
     margin: 0 0 12px;
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .category-key ul {
@@ -2294,7 +2391,7 @@ button {
     padding: 0;
     color: #48484a;
     border: 0;
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .team-indicators summary {
@@ -2319,11 +2416,11 @@ button {
     color: #005bb8;
     border-radius: 999px;
     background: var(--info-surface);
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .team-indicators summary i {
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .team-indicators ul {
@@ -2353,7 +2450,7 @@ button {
     margin: 0 0 4px;
     display: block;
     color: #005bb8;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -2394,7 +2491,7 @@ button {
     background: rgba(255, 255, 255, 0.58);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78),
     0 5px 16px rgba(15, 23, 42, 0.045);
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .report-disclaimer i {
@@ -2410,17 +2507,17 @@ button {
 
 .loading-overlay:not([hidden]) [data-state-reveal],
 .progress-failure:not([hidden])[data-state-reveal] {
-    animation: state-reveal 460ms var(--reveal-ease) both;
+    animation: state-reveal 560ms var(--reveal-ease) both;
 }
 
 .error-card.is-state-refreshing > * {
-    animation: error-state-refresh 360ms var(--reveal-ease) both;
+    animation: error-state-refresh 460ms var(--reveal-ease) both;
 }
 
 .commit-details[open] > .commit-list,
 .commit-supplementary[open] > :not(summary),
 .team-indicators[open] > ul {
-    animation: details-reveal 420ms var(--reveal-ease) both;
+    animation: details-reveal 520ms var(--reveal-ease) both;
 }
 
 .overview-track span,
@@ -2438,7 +2535,7 @@ button {
 .reveal-ready .overview-card[data-reveal-group].is-revealed .overview-track span,
 .reveal-ready .contributor-card[data-reveal-on-scroll].is-revealed .contributor-share-track span,
 .reveal-ready .contributor-card[data-reveal-on-scroll].is-revealed .category-segment {
-    animation: bar-grow 780ms var(--reveal-ease) 220ms both;
+    animation: bar-grow 900ms var(--reveal-ease) 200ms both;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -2449,9 +2546,9 @@ button {
     .contributor-card,
     .category-key,
     .report-disclaimer {
-        transition: transform 260ms var(--reveal-ease),
-        border-color 220ms ease,
-        box-shadow 260ms ease;
+        transition: transform 320ms var(--reveal-ease),
+        border-color 280ms var(--motion-ease),
+        box-shadow 320ms var(--motion-ease);
     }
 
     .analysis-form-card:hover,
@@ -2465,7 +2562,7 @@ button {
         box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.96),
         0 3px 7px rgba(15, 23, 42, 0.05),
         0 18px 42px rgba(15, 23, 42, 0.12);
-        transform: translateY(-3px);
+        transform: translateY(-2px);
     }
 
     .how-card:hover .how-card__step i {
@@ -2475,7 +2572,7 @@ button {
 
     .commit-details > summary,
     .commit-supplementary > summary {
-        transition: color 160ms ease, background-color 160ms ease;
+        transition: color 220ms var(--motion-ease), background-color 220ms var(--motion-ease);
     }
 
     .commit-details > summary:hover,
@@ -2554,21 +2651,10 @@ button {
     }
 }
 
-@keyframes progress-number {
-    0% {
-        opacity: 0.72;
-        transform: translateY(2px) scale(0.99);
-    }
-    100% {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-}
-
 @keyframes progress-copy-in {
     0% {
-        opacity: 0.6;
-        transform: translateY(4px);
+        opacity: 0.7;
+        transform: translateY(3px);
     }
     100% {
         opacity: 1;
@@ -2578,11 +2664,85 @@ button {
 
 @keyframes stage-check-in {
     0% {
-        opacity: 0.45;
-        transform: scale(0.82);
+        opacity: 0.58;
+        box-shadow: 0 0 0 2px rgba(47, 107, 255, 0.09);
+        transform: scale(0.91);
     }
     70% {
-        transform: scale(1.06);
+        opacity: 1;
+        box-shadow: 0 0 0 6px rgba(22, 163, 74, 0.085);
+        transform: scale(1.035);
+    }
+    100% {
+        opacity: 1;
+        box-shadow: 0 0 0 0 rgba(22, 163, 74, 0);
+        transform: scale(1);
+    }
+}
+
+@keyframes stage-check-reveal {
+    0% {
+        opacity: 0;
+        clip-path: inset(0 100% 0 0);
+        transform: translateX(-1px) scale(0.9);
+    }
+    78% {
+        opacity: 1;
+        clip-path: inset(0 0 0 0);
+        transform: translateX(0) scale(1.025);
+    }
+    100% {
+        opacity: 1;
+        clip-path: inset(0 0 0 0);
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes stage-connector-draw {
+    0% {
+        opacity: 0.2;
+        transform: scaleX(0);
+    }
+    100% {
+        opacity: 1;
+        transform: scaleX(1);
+    }
+}
+
+@keyframes stage-connector-draw-mobile {
+    0% {
+        opacity: 0.2;
+        transform: scaleY(0);
+    }
+    100% {
+        opacity: 1;
+        transform: scaleY(1);
+    }
+}
+
+@keyframes stage-current-arrive {
+    0% {
+        opacity: 0.5;
+        transform: scale(0.9);
+    }
+    72% {
+        opacity: 1;
+        transform: scale(1.035);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes stage-current-dot-in {
+    0% {
+        opacity: 0;
+        transform: scale(0.55);
+    }
+    75% {
+        opacity: 1;
+        transform: scale(1.08);
     }
     100% {
         opacity: 1;
@@ -2593,7 +2753,7 @@ button {
 @keyframes stage-skip-in {
     0% {
         opacity: 0;
-        transform: scale(0.88);
+        transform: scale(0.94);
     }
     100% {
         opacity: 1;
@@ -2603,12 +2763,12 @@ button {
 
 @keyframes stage-current-pulse {
     0%, 100% {
-        box-shadow: 0 0 0 4px rgba(47, 107, 255, 0.14),
-        0 4px 10px rgba(47, 107, 255, 0.28);
+        box-shadow: 0 0 0 5px rgba(47, 107, 255, 0.13),
+        0 4px 10px rgba(47, 107, 255, 0.24);
     }
     50% {
-        box-shadow: 0 0 0 6px rgba(47, 107, 255, 0.08),
-        0 4px 11px rgba(47, 107, 255, 0.29);
+        box-shadow: 0 0 0 6px rgba(47, 107, 255, 0.075),
+        0 5px 12px rgba(47, 107, 255, 0.27);
     }
 }
 
@@ -2616,8 +2776,9 @@ button {
     to { transform: rotate(360deg); }
 }
 
-@keyframes progress-ring-spin {
-    to { transform: rotate(360deg); }
+@keyframes progress-endpoint-pulse {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.08); }
+    50% { box-shadow: 0 0 0 7px rgba(47, 107, 255, 0.16); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2643,7 +2804,6 @@ button {
     }
 }
 
-/* Wide screens gain canvas width without artificially enlarging the whole interface. */
 @media screen and (min-width: 1600px) {
     .site-header__inner {
         width: min(var(--wide-page-content-width), calc(100% - 40px));
@@ -2661,10 +2821,6 @@ button {
         width: min(var(--wide-page-content-width), 100%);
     }
 
-    .progress-experience {
-        width: min(var(--wide-page-content-width), 100%);
-    }
-
     .error-card {
         width: min(var(--wide-focused-content-width), 100%);
     }
@@ -2674,7 +2830,6 @@ button {
     }
 }
 
-/* Print */
 @media print {
     @page {
         margin: 15mm;
@@ -2752,7 +2907,6 @@ button {
     }
 }
 
-/* Responsive */
 @media (max-width: 900px) {
     .report-meta {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2763,11 +2917,65 @@ button {
     }
 }
 
-@media (max-width: 850px) {
-    .progress-experience.is-reconnecting .progress-copy p {
-        line-height: 1.625;
-        transform: translateY(-1px);
+@media (min-width: 901px) and (min-height: 900px) {
+    .progress-page { padding-top: 64px; }
+    .progress-summary { padding-block: 44px; }
+}
+
+@media (min-width: 901px) and (max-height: 740px) {
+    .progress-page { padding-top: 20px; }
+    .progress-summary { padding-block: 20px; }
+}
+
+@media (min-width: 901px) {
+    .stage-list li {
+        grid-template-rows: 30px 56px 26px;
     }
+
+    .progress-experience .stage-list li.is-current .stage-badges:has(.stage-badge--ai, .stage-badge--fallback) .stage-badge--running {
+        display: none;
+    }
+}
+
+@media (max-width: 900px) {
+    .progress-context { justify-content: center; flex-direction: column-reverse; gap: 10px; }
+    .progress-repository { text-align: center; }
+    .progress-summary {
+        grid-template-columns: minmax(0, 1fr);
+        justify-items: center;
+        gap: 24px;
+        padding: 28px 0 16px;
+        text-align: center;
+    }
+    .progress-copy { width: min(520px, 100%); }
+    .progress-copy h1 { min-height: 70px; justify-content: center; }
+    .progress-copy #progressMessage { min-height: 78px; }
+    .progress-copy .progress-copy__eyebrow { margin-bottom: 8px; }
+    .analysis-pipeline { margin-top: 12px; padding: 20px; }
+    .stage-list { min-height: 0; margin-top: 20px; grid-template-columns: 1fr; text-align: left; }
+    .stage-list li {
+        min-height: 48px;
+        grid-template-columns: 34px minmax(0, 1fr) auto;
+        grid-template-rows: auto;
+        align-items: start;
+        justify-items: start;
+        gap: 0 8px;
+    }
+    .stage-list li::after {
+        top: 26px; left: 12px; width: 0; height: calc(100% - 26px);
+        border-top: 0; border-left: 2px solid var(--progress-line);
+    }
+    .stage-list li.is-complete::after {
+        border-left-color: var(--progress-green);
+        animation-name: stage-connector-draw-mobile;
+        transform-origin: center top;
+    }
+    .stage-list li.is-skipped::after { border-left-style: dashed; }
+    .stage-status { grid-column: 1; grid-row: 1; }
+    .stage-label { max-width: none; padding: 3px 0 12px; font-size: 14px; line-height: 20px; }
+    .stage-badges { max-width: 100px; padding-top: 3px; justify-content: flex-end; }
+    .stage-list li:last-child { min-height: 32px; }
+    .stage-list li:last-child .stage-label { padding-bottom: 0; }
 }
 
 @media (max-width: 760px) {
@@ -2806,7 +3014,7 @@ button {
     }
 
     .report-header h1 {
-        font-size: clamp(28px, 6vw, 34px);
+        font-size: clamp(29px, 6vw, 35px);
     }
 
     .report-card,
@@ -2821,98 +3029,18 @@ button {
     }
 
     .progress-page {
-        padding-top: 26px;
+        padding-top: 30px;
     }
 
     .progress-ring {
-        width: 176px;
-        height: 176px;
-        margin-top: 17px;
+        width: 216px;
+        height: 216px;
     }
 
-    .progress-ring::after {
-        inset: 8px;
-        border-width: 8px;
-    }
+    .progress-ring__value strong { font-size: 60px; }
+    .progress-ring__value span { font-size: 23px; }
+    .progress-copy h1 { font-size: 32px; }
 
-    .progress-ring__value strong {
-        font-size: 48px;
-    }
-
-    .progress-ring__value span {
-        font-size: 19px;
-    }
-
-    .progress-copy h1 {
-        margin-top: 13px;
-        font-size: 28px;
-    }
-
-    .analysis-pipeline {
-        margin-top: 22px;
-        padding: 18px;
-    }
-
-    .stage-list {
-        height: auto;
-        margin-top: 18px;
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 0;
-        text-align: left;
-    }
-
-    .stage-list li {
-        min-height: 58px;
-        display: grid;
-        grid-template-columns: 34px minmax(0, 1fr);
-        grid-template-rows: 27px 25px;
-        justify-items: start;
-        align-items: start;
-    }
-
-    .stage-list li::after {
-        top: 25px;
-        left: 12px;
-        width: 0;
-        height: 34px;
-        border-top: 0;
-        border-left: 2px solid var(--progress-line);
-    }
-
-    .stage-list li.is-complete::after {
-        border-left-color: var(--progress-green);
-    }
-
-    .stage-list li.is-skipped::after {
-        border-left-color: var(--progress-line);
-    }
-
-    .stage-status {
-        grid-column: 1;
-        grid-row: 1 / span 2;
-    }
-
-    .stage-label {
-        max-width: none;
-        padding: 3px 0 0;
-        grid-column: 2;
-        grid-row: 1;
-        font-size: 13px;
-        line-height: 20px;
-    }
-
-    .stage-badges {
-        min-height: 21px;
-        padding-top: 0;
-        grid-column: 2;
-        grid-row: 2;
-        justify-content: flex-start;
-    }
-
-    .progress-footnote {
-        margin-top: 13px;
-    }
 }
 
 @media (max-width: 560px) {
@@ -2921,11 +3049,11 @@ button {
     }
 
     .site-header__link {
-        font-size: 14px;
+        font-size: 15px;
     }
 
     .site-brand__name {
-        font-size: 15px;
+        font-size: 16px;
     }
 
     .home-hero {
@@ -2933,11 +3061,11 @@ button {
     }
 
     .home-hero h1 {
-        font-size: 38px;
+        font-size: 40px;
     }
 
     .home-hero__lead {
-        font-size: 16px;
+        font-size: 17px;
     }
 
     .hero-actions {
@@ -2957,7 +3085,7 @@ button {
     }
 
     .section-intro h2 {
-        font-size: 30px;
+        font-size: 31px;
     }
 
     .analysis-form-card {
@@ -2976,38 +3104,52 @@ button {
     }
 
     .progress-page {
-        padding: 24px 16px 28px;
+        padding: 28px 16px 30px;
     }
 
     .progress-repository {
-        font-size: 14px;
+        font-size: 17px;
     }
 
     .progress-ring {
-        width: 166px;
-        height: 166px;
-        margin-top: 16px;
+        width: 208px;
+        height: 208px;
     }
 
     .progress-ring__value strong {
-        font-size: 45px;
+        font-size: 56px;
     }
 
     .progress-ring__value span {
-        font-size: 18px;
+        font-size: 21px;
     }
 
     .progress-copy h1 {
-        font-size: 26px;
-    }
-
-    .progress-copy p {
-        font-size: 14px;
+        font-size: 30px;
     }
 
     .analysis-pipeline {
         padding: 16px;
     }
+
+    .stage-list li {
+        grid-template-columns: 30px minmax(0, 1fr);
+        min-height: 52px;
+    }
+
+    .stage-badges {
+        grid-column: 2;
+        max-width: none;
+        padding: 0 0 4px;
+        justify-content: flex-start;
+    }
+
+    .stage-list li:not(.is-current) .stage-badges:not(:has(.stage-badge--ai, .stage-badge--fallback)) {
+        display: none;
+    }
+
+    .stage-label { padding-bottom: 4px; }
+    .stage-status { grid-row: 1 / span 2; }
 
     .progress-preview,
     .error-preview {
@@ -3042,7 +3184,7 @@ button {
     }
 
     .error-card h1 {
-        font-size: 25px;
+        font-size: 26px;
     }
 
     .report-shell {
