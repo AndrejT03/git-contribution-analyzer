@@ -24,7 +24,7 @@ class AiProviderSelectionTest {
     @Test
     void parsesAllFiftyTwoModelsAcrossAllElevenProviders() {
         assertThat(AiProvider.values()).hasSize(11);
-        assertThat(AiProviderSelection.supportedValues()).hasSize(51);
+        assertThat(AiProviderSelection.supportedValues()).hasSize(66);
 
         assertThat(AiProviderSelection.supportedValues())
                 .allSatisfy(value -> {
@@ -55,9 +55,9 @@ class AiProviderSelectionTest {
             formModels.add(matcher.group(1));
         }
 
-        assertThat(optionCount).isEqualTo(51);
+        assertThat(optionCount).isEqualTo(66);
         assertThat(formModels)
-                .hasSize(51)
+                .hasSize(66)
                 .containsExactlyElementsOf(AiProviderSelection.supportedValues());
     }
 
