@@ -42,11 +42,11 @@ Screenshots from the application UI. The form uses example inputs; progress, rep
   <tr>
     <td width="50%" valign="top">
       <p><strong>Home page</strong> — introduction and analysis entry point.</p>
-      <a href="../../IdeaProjects/git-contribution-analyzer/pics/home.png"><img src="../../IdeaProjects/git-contribution-analyzer/pics/home.png" alt="Redesigned home page with the project introduction and Start analysis action" width="100%" /></a>
+      <a href="pics/home.png"><img src="pics/home.png" alt="Redesigned home page with the project introduction and Start analysis action" width="100%" /></a>
     </td>
     <td width="50%" valign="top">
       <p><strong>Analysis form</strong> — repository, project goal, model, API key, and email.</p>
-      <a href="../../IdeaProjects/git-contribution-analyzer/pics/input.png"><img src="../../IdeaProjects/git-contribution-analyzer/pics/input.png" alt="Five-field analysis form with the AI model selector and masked example API key" width="100%" /></a>
+      <a href="pics/input.png"><img src="pics/input.png" alt="Five-field analysis form with the AI model selector and masked example API key" width="100%" /></a>
     </td>
   </tr>
   <tr>
