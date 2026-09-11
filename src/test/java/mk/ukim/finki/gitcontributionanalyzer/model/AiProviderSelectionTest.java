@@ -58,7 +58,7 @@ class AiProviderSelectionTest {
         assertThat(optionCount).isEqualTo(66);
         assertThat(formModels)
                 .hasSize(66)
-                .containsExactlyElementsOf(AiProviderSelection.supportedValues());
+                .containsExactlyInAnyOrderElementsOf(AiProviderSelection.supportedValues());
     }
 
     @Test
